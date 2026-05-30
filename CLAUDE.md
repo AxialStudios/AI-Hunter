@@ -4,8 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Status
 
-This repository is in early initialization — no source code exists yet beyond an empty `Assets/` directory. Update this file as the project takes shape.
+Early initialization — no app source code yet. Stack confirmed: **Expo / React Native** (frontend) + **Supabase** (backend/auth/db).
 
 ## Repository Notes
 
-- No remote configured yet (`git remote -v` returns nothing).
+- Remote: `https://github.com/AxialStudios/AI-Hunter.git`
+- Default branch: `main`
