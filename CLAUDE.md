@@ -10,3 +10,4 @@ Early initialization — no app source code yet. Stack confirmed: **Expo / React
 
 - Remote: `https://github.com/AxialStudios/AI-Hunter.git`
 - Default branch: `main`
+
