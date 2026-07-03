@@ -26,7 +26,7 @@ Project plan and micro-steps will be pasted here after planning session.
 - [x] **0.1 — Confirm the project runs.** Start the dev server, load the app on your iPhone via Expo Go, confirm hot-reload works (edit a text string, watch it update). ✅ *Verify: app loads on phone, edit reloads live.*
 - [x] **0.2 — Set up the folder structure.** Create the modular directories: `components/` (UI primitives), `features/onboarding/`, `features/gameplay/`, `features/dashboard/`, `context/` (shared state/theme). ✅ *Verify: folders exist, app still runs.*
 - [x] **0.3 — Secure the Supabase keys.** Confirm the Supabase URL + anon key live in a `.env` file, and that `.env` is listed in `.gitignore` so it never gets committed. ✅ *Verify: `.env` is git-ignored; no keys hardcoded anywhere.*
-- [ ] **0.4 — Confirm the Supabase client connects.** Have a minimal client-init file; run a trivial read against Supabase to prove the connection works from the app. ✅ *Verify: a test query returns without auth/connection errors.*
+- [x] **0.4 — Confirm the Supabase client connects.** Have a minimal client-init file; run a trivial read against Supabase to prove the connection works from the app. ✅ *Verify: a test query returns without auth/connection errors.*
 - [ ] **0.5 — Commit.** `git commit` the clean foundation.
 
 ---
