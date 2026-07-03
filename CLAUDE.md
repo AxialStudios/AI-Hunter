@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Status
 
-Early initialization — no app source code yet. Stack confirmed: **Expo / React Native** (frontend) + **Supabase** (backend/auth/db).
+App is in active development. Stack: **Expo / React Native** (frontend) + **Supabase** (backend/auth/db). All app code lives in `aihunter-app/`.
 
 ## Repository Notes
 
