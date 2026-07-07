@@ -35,11 +35,11 @@ Project plan and micro-steps will be pasted here after planning session.
 
 *Goal: lock the schema that makes the data asset real — event log + provenance + consent. This exists as its own phase so the asset is never an afterthought.*
 
-- [ ] **0.5.1 — Design `profiles`.** Fields: `id` (FK → auth.users), `age_range`, `region`, `self_rated_fluency`, `tier_status`. Store age **range** and general region only — **never** IP or precise location. ✅ *Verify: schema written, reviewed, no PII beyond what's needed.*
-- [ ] **0.5.2 — Design `tasks` (cards) with provenance.** Fields: `id`, `real_image_url`, `ai_image_url`, `ai_model_engine`, `generation_prompt`, `source_attribution`, `tell_annotations` (jsonb: array of `{x, y, radius, label, description}`), `approval_status` (pending/active/rejected), `seed_real_votes`, `seed_ai_votes`, `difficulty_tier` (nullable, post-MVP), `created_at`. ✅ *Verify: every card can trace its full origin.*
-- [ ] **0.5.3 — Design `votes` (the event log — the asset).** Fields: `id`, `task_id`, `user_id`, `chose_ai` (boolean = did they believe the AI was AI), `was_correct`, `response_time_ms`, `created_at`. **One row per vote.** ✅ *Verify: percentages can always be recomputed from this log; log can never be recovered from percentages.*
-- [ ] **0.5.4 — Design consent/age scaffolding.** A `consent_version` + `consented_at` field on `profiles`, and a **13+ age floor** (do not knowingly collect from under-13). ✅ *Verify: schema supports honest disclosure + age gate.*
-- [ ] **0.5.5 — Commit** the schema design (as SQL/migration files, not yet applied if you want a review pass first).
+- [x] **0.5.1 — Design `profiles`.** Fields: `id` (FK → auth.users), `age_range`, `region`, `self_rated_fluency`, `tier_status`. Store age **range** and general region only — **never** IP or precise location. ✅ *Verify: schema written, reviewed, no PII beyond what's needed.*
+- [x] **0.5.2 — Design `tasks` (cards) with provenance.** Fields: `id`, `real_image_url`, `ai_image_url`, `ai_model_engine`, `generation_prompt`, `source_attribution`, `tell_annotations` (jsonb: array of `{x, y, radius, label, description}`), `approval_status` (pending/active/rejected), `seed_real_votes`, `seed_ai_votes`, `difficulty_tier` (nullable, post-MVP), `created_at`. ✅ *Verify: every card can trace its full origin.*
+- [x] **0.5.3 — Design `votes` (the event log — the asset).** Fields: `id`, `task_id`, `user_id`, `chose_ai` (boolean = did they believe the AI was AI), `was_correct`, `response_time_ms`, `created_at`. **One row per vote.** ✅ *Verify: percentages can always be recomputed from this log; log can never be recovered from percentages.*
+- [x] **0.5.4 — Design consent/age scaffolding.** A `consent_version` + `consented_at` field on `profiles`, and a **13+ age floor** (do not knowingly collect from under-13). ✅ *Verify: schema supports honest disclosure + age gate.*
+- [x] **0.5.5 — Commit** the schema design (as SQL/migration files, not yet applied if you want a review pass first).
 
 ---
 
