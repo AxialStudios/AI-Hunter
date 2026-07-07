@@ -19,6 +19,8 @@ Project plan and micro-steps will be pasted here after planning session.
 
 ---
 
+
+
 ## Phase 0 — Foundations
 
 *Goal: clean, organized project wired to Supabase. (Real project + Supabase already exist — this phase confirms and structures.)*
@@ -30,6 +32,8 @@ Project plan and micro-steps will be pasted here after planning session.
 - [x] **0.5 — Commit.** `git commit` the clean foundation.
 
 ---
+
+
 
 ## Phase 0.5 — Data Rails (schema design, no UI)
 
@@ -43,12 +47,14 @@ Project plan and micro-steps will be pasted here after planning session.
 
 ---
 
+
+
 ## Phase 1 — Backend (create tables + security)
 
 *Goal: the three tables live in Supabase with security locked from day one.*
 
 - [x] **1.1 — Create the tables.** Apply `profiles`, `tasks`, `votes` to Supabase with an `approval_status` enum and the seed-vote integer columns. ✅ *Verify: tables visible in Supabase.*
-- [ ] **1.2 — Enable Row-Level Security on every table.** RLS ON before any data goes in. ✅ *Verify: RLS shows enabled on all three.*
+- [x] **1.2 — Enable Row-Level Security on every table.** RLS ON before any data goes in. ✅ *Verify: RLS shows enabled on all three.*
 - [x] **1.3 — Write RLS policies.**
   - Public read on `tasks` **only** where `approval_status = 'active'`.
   - `votes`: insert allowed only for the user's own session (`auth.uid()`); **no** client update/delete.
@@ -58,6 +64,8 @@ Project plan and micro-steps will be pasted here after planning session.
 - [ ] **1.5 — Commit.**
 
 ---
+
+
 
 ## Phase 2 — App Skeleton (first UI — functional, ugly is fine)
 
@@ -71,6 +79,8 @@ Project plan and micro-steps will be pasted here after planning session.
 
 ---
 
+
+
 ## Phase 3 — Seed Content (hand-made, ~15 pairs)
 
 *Goal: real cards in the DB so there's something to play. You'll make these by hand — crude is fine.*
@@ -80,6 +90,8 @@ Project plan and micro-steps will be pasted here after planning session.
 - [ ] **3.3 — Commit.**
 
 ---
+
+
 
 ## Phase 4 — Vertical Slice (the milestone: one card playable end-to-end)
 
@@ -94,11 +106,15 @@ Project plan and micro-steps will be pasted here after planning session.
 
 ---
 
+
+
 ## ✅ Definition of Done (MVP skeleton)
 
 You can, on your iPhone: complete onboarding → see a card → tap the real image → get the right/wrong reveal → see the percentage bars → flip to see the tells → advance to the next card. Every vote lands as its own row in the event log. RLS verified. All committed to git.
 
 ---
+
+
 
 ## 🅿️ Parking Lot (post-skeleton / post-MVP — documented, NOT in the build path)
 
@@ -114,6 +130,8 @@ You can, on your iPhone: complete onboarding → see a card → tap the real ima
 - Data-licensing outreach (detection companies, trust & safety, academia) — treat as upside, not the plan
 
 ---
+
+
 
 ## Guardrails (keep these true the whole way)
 
