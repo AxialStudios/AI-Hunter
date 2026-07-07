@@ -49,7 +49,7 @@ Project plan and micro-steps will be pasted here after planning session.
 
 - [x] **1.1 — Create the tables.** Apply `profiles`, `tasks`, `votes` to Supabase with an `approval_status` enum and the seed-vote integer columns. ✅ *Verify: tables visible in Supabase.*
 - [ ] **1.2 — Enable Row-Level Security on every table.** RLS ON before any data goes in. ✅ *Verify: RLS shows enabled on all three.*
-- [ ] **1.3 — Write RLS policies.**
+- [x] **1.3 — Write RLS policies.**
   - Public read on `tasks` **only** where `approval_status = 'active'`.
   - `votes`: insert allowed only for the user's own session (`auth.uid()`); **no** client update/delete.
   - `profiles`: read/write own row only.
