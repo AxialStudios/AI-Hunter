@@ -19,8 +19,6 @@ Project plan and micro-steps will be pasted here after planning session.
 
 ---
 
-
-
 ## Phase 0 — Foundations
 
 *Goal: clean, organized project wired to Supabase. (Real project + Supabase already exist — this phase confirms and structures.)*
@@ -33,8 +31,6 @@ Project plan and micro-steps will be pasted here after planning session.
 
 ---
 
-
-
 ## Phase 0.5 — Data Rails (schema design, no UI)
 
 *Goal: lock the schema that makes the data asset real — event log + provenance + consent. This exists as its own phase so the asset is never an afterthought.*
@@ -46,8 +42,6 @@ Project plan and micro-steps will be pasted here after planning session.
 - [x] **0.5.5 — Commit** the schema design (as SQL/migration files, not yet applied if you want a review pass first).
 
 ---
-
-
 
 ## Phase 1 — Backend (create tables + security)
 
@@ -65,8 +59,6 @@ Project plan and micro-steps will be pasted here after planning session.
 
 ---
 
-
-
 ## Phase 2 — App Skeleton (first UI — functional, ugly is fine)
 
 *Goal: navigation + screens + anonymous auth, wired to the backend. Plain boxes. No polish.*
@@ -79,8 +71,6 @@ Project plan and micro-steps will be pasted here after planning session.
 
 ---
 
-
-
 ## Phase 3 — Seed Content (hand-made, ~15 pairs)
 
 *Goal: real cards in the DB so there's something to play. You'll make these by hand — crude is fine.*
@@ -90,8 +80,6 @@ Project plan and micro-steps will be pasted here after planning session.
 - [ ] **3.3 — Commit.**
 
 ---
-
-
 
 ## Phase 4 — Vertical Slice (the milestone: one card playable end-to-end)
 
@@ -106,15 +94,11 @@ Project plan and micro-steps will be pasted here after planning session.
 
 ---
 
-
-
 ## ✅ Definition of Done (MVP skeleton)
 
 You can, on your iPhone: complete onboarding → see a card → tap the real image → get the right/wrong reveal → see the percentage bars → flip to see the tells → advance to the next card. Every vote lands as its own row in the event log. RLS verified. All committed to git.
 
 ---
-
-
 
 ## 🅿️ Parking Lot (post-skeleton / post-MVP — documented, NOT in the build path)
 
@@ -130,8 +114,6 @@ You can, on your iPhone: complete onboarding → see a card → tap the real ima
 - Data-licensing outreach (detection companies, trust & safety, academia) — treat as upside, not the plan
 
 ---
-
-
 
 ## Guardrails (keep these true the whole way)
 
