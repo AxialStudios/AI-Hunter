@@ -1,38 +1,19 @@
-import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { supabase } from './lib/supabase';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import OnboardingScreen from './features/onboarding/OnboardingScreen';
+import GameplayScreen from './features/gameplay/GameplayScreen';
+import ResultsScreen from './features/gameplay/ResultsScreen';
+
+const Stack = createNativeStackNavigator();
 
 export default function App() {
-  const [status, setStatus] = useState('Connecting to Supabase...');
-
-  useEffect(() => {
-    supabase.auth.getSession()
-      .then(({ error }) => {
-        if (error) {
-          setStatus('Connection failed: ' + error.message);
-        } else {
-          setStatus('Supabase connected!');
-        }
-      });
-  }, []);
-
   return (
-    <View style={styles.container}>
-      <Text style={styles.text}>{status}</Text>
-      <StatusBar style="auto" />
-    </View>
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName="Onboarding">
+        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+        <Stack.Screen name="Gameplay" component={GameplayScreen} />
+        <Stack.Screen name="Results" component={ResultsScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  text: {
-    fontSize: 18,
-  },
-});
