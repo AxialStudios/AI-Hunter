@@ -60,8 +60,8 @@ Project plan and micro-steps will be pasted here after planning session.
   - `votes`: insert allowed only for the user's own session (`auth.uid()`); **no** client update/delete.
   - `profiles`: read/write own row only.
   - ✅ *Verify (do this explicitly): try to read another user's data and confirm you **cannot**. Ask Claude Code to explain how each policy blocks cross-user access.*
-- [ ] **1.4 — (Optional but recommended) Vote-recording RPC.** A server-side function that records a vote and returns the aggregate, so the answer key isn't fully exposed client-side. *(If this adds friction now, note it and defer — acceptable for MVP.)*
-- [ ] **1.5 — Commit.**
+- [x] **1.4 — (Optional but recommended) Vote-recording RPC.** A server-side function that records a vote and returns the aggregate, so the answer key isn't fully exposed client-side. *(If this adds friction now, note it and defer — acceptable for MVP.)*
+- [x] **1.5 — Commit.**
 
 ---
 
