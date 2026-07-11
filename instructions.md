@@ -71,11 +71,11 @@ Project plan and micro-steps will be pasted here after planning session.
 
 *Goal: navigation + screens + anonymous auth, wired to the backend. Plain boxes. No polish.*
 
-- [ ] **2.1 — Navigation shell.** Set up navigation between placeholder screens: Onboarding → Gameplay → Results. ✅ *Verify: you can move between blank screens on your phone.*
-- [ ] **2.2 — Theme + haptics context.** Stub the shared `context/` providers (theme, haptics manager) — empty/minimal for now, just wired in. ✅ *Verify: app runs with providers mounted.*
-- [ ] **2.3 — Anonymous auth bootstrap.** On app open, start a Supabase **anonymous session** so every user has an `auth.users` id without making an account. ✅ *Verify: opening the app creates/reuses an anonymous session; a* `profiles` *row can attach to it.*
-- [ ] **2.4 — Onboarding survey (functional).** A single-step screen capturing `age_range`, `region`, `self_rated_fluency`, plus a plain-language **consent line** ("We collect anonymous gameplay + survey answers to study how people perceive AI images… ") with an "Agree & play" button. Writes to `profiles`. ✅ *Verify: submitting writes a real row; 13+ gate works.*
-- [ ] **2.5 — Commit.**
+- [x] **2.1 — Navigation shell.** Set up navigation between placeholder screens: Onboarding → Gameplay → Results. ✅ *Verify: you can move between blank screens on your phone.*
+- [x] **2.2 — Theme + haptics context.** Stub the shared `context/` providers (theme, haptics manager) — empty/minimal for now, just wired in. ✅ *Verify: app runs with providers mounted.*
+- [x] **2.3 — Anonymous auth bootstrap.** On app open, start a Supabase **anonymous session** so every user has an `auth.users` id without making an account. ✅ *Verify: opening the app creates/reuses an anonymous session; a* `profiles` *row can attach to it.*
+- [x] **2.4 — Onboarding survey (functional).** A single-step screen capturing `age_range`, `region`, `self_rated_fluency`, plus a plain-language **consent line** ("We collect anonymous gameplay + survey answers to study how people perceive AI images… ") with an "Agree & play" button. Writes to `profiles`. ✅ *Verify: submitting writes a real row; 13+ gate works.*
+- [x] **2.5 — Commit.**
 
 ---
 
