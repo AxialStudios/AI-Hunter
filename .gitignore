@@ -28,6 +28,9 @@ android/
 .env.*.local
 *.pem
 
+# Seed script secrets
+scripts/node_modules/
+
 # Supabase
 supabase/.branches/
 supabase/.temp/
