@@ -86,8 +86,8 @@ Project plan and micro-steps will be pasted here after planning session.
 *Goal: real cards in the DB so there's something to play. You'll make these by hand — crude is fine.*
 
 - [x] **3.1 — Make 15 pairs by hand.** For each: pick an Unsplash photo, generate a similar-scene AI image (same rough aspect ratio), and note 1–3 tells for the AI one. Keep them same-shape so no framing tell. *(No cropping code, no pipeline — just do it manually for these 15.)* ✅ *Verify: 15 real+AI pairs saved somewhere with their tell notes.*
-- [ ] **3.2 — Write a one-off seed script.** A small script that inserts those 15 pairs into `tasks` with `approval_status = 'active'`, provenance fields filled, `tell_annotations` as jsonb, and hand-set `seed_real_votes`/`seed_ai_votes` (plausible starting numbers so early percentages aren't 0/0). ✅ *Verify: 15 active tasks appear in Supabase.*
-- [ ] **3.3 — Commit.**
+- [x] **3.2 — Write a one-off seed script.** A small script that inserts those 15 pairs into `tasks` with `approval_status = 'active'`, provenance fields filled, `tell_annotations` as jsonb, and hand-set `seed_real_votes`/`seed_ai_votes` (plausible starting numbers so early percentages aren't 0/0). ✅ *Verify: 15 active tasks appear in Supabase.*
+- [x] **3.3 — Commit.**
 
 ---
 
