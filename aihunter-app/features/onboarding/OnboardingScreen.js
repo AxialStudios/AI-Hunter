@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
 
   content:            { paddingHorizontal: 20, paddingBottom: 24, gap: 20 },
 
-  illustration:       { width: '100%', height: 160, borderRadius: radius.xl, alignItems: 'center', justifyContent: 'center' },
+  illustration:       { width: '100%', height: 120, borderRadius: radius.xl, alignItems: 'center', justifyContent: 'center' },
   illustrationEmoji:  { fontSize: 64 },
 
   question:           { fontSize: 30, fontFamily: fonts.bold, color: colors.textPrimary, lineHeight: 38, textAlign: 'center' },
