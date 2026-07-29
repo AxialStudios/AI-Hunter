@@ -97,12 +97,12 @@ Project plan and micro-steps will be pasted here after planning session.
 
 *Goal: the full loop works on your phone. Still functional-not-pretty. When this works, the MVP skeleton is DONE.*
 
-- [ ] **4.1 — Render one card.** Pull an active task, display the real + AI images side by side, **randomize which side is real**, with the "Tap the real image" prompt. ✅ *Verify: a real card renders on your phone with correct prompt.*
-- [ ] **4.2 — Capture a vote → write to event log.** On tap, determine correctness, write **one row** to `votes` (task, user, `chose_ai`, `was_correct`, `response_time_ms`). ✅ *Verify: each tap creates exactly one new votes row.*
-- [ ] **4.3 — Read aggregate + show percentage meters.** Compute the percentage from seed votes + real votes, reveal the Wishbone-style bars showing what % picked each side, and show the correct/incorrect result. ✅ *Verify: bars display sensible percentages; math matches the log.*
-- [ ] **4.4 — Flip card → show tells.** Tapping the info icon flips the card to the AI image with its `tell_annotations` marked. ✅ *Verify: flip works, tells render from the DB.*
-- [ ] **4.5 — Advance to next card.** After the result, a way to move to the next task. ✅ *Verify: you can play several cards in a row.*
-- [ ] **4.6 — 🎉 MILESTONE COMMIT.** The loop runs on your phone. This is the shippable skeleton.
+- [x] **4.1 — Render one card.** Pull an active task, display the real + AI images side by side, **randomize which side is real**, with the "Tap the real image" prompt. ✅ *Verify: a real card renders on your phone with correct prompt.*
+- [x] **4.2 — Capture a vote → write to event log.** On tap, determine correctness, write **one row** to `votes` (task, user, `chose_ai`, `was_correct`, `response_time_ms`). ✅ *Verify: each tap creates exactly one new votes row.*
+- [x] **4.3 — Read aggregate + show percentage meters.** Compute the percentage from seed votes + real votes, reveal the Wishbone-style bars showing what % picked each side, and show the correct/incorrect result. ✅ *Verify: bars display sensible percentages; math matches the log.*
+- [x] **4.4 — Flip card → show tells.** Tapping the info icon flips the card to the AI image with its `tell_annotations` marked. ✅ *Verify: flip works, tells render from the DB.*
+- [x] **4.5 — Advance to next card.** After the result, a way to move to the next task. ✅ *Verify: you can play several cards in a row.*
+- [x] **4.6 — 🎉 MILESTONE COMMIT.** The loop runs on your phone. This is the shippable skeleton.
 
 ---
 
