@@ -167,11 +167,6 @@ export default function GameplayScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {voting && (
-        <View style={styles.votingOverlay}>
-          <ActivityIndicator color={colors.textPrimary} />
-        </View>
-      )}
     </SafeAreaView>
   );
 }
@@ -185,5 +180,4 @@ const styles = StyleSheet.create({
   imageWrapper:         { flex: 1, aspectRatio: 0.5, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.surface, borderWidth: 3, borderColor: 'transparent' },
   imageWrapperSelected: { borderColor: colors.textPrimary },
   image:                { width: '100%', height: '100%' },
-  votingOverlay:        { position: 'absolute', bottom: 32, left: 0, right: 0, alignItems: 'center' },
 });

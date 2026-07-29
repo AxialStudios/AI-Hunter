@@ -190,14 +190,14 @@ const styles = StyleSheet.create({
   progressSegment:    { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.surface2 },
   progressActive:     { backgroundColor: colors.textPrimary },
 
-  content:            { paddingHorizontal: 20, paddingBottom: 24, gap: 20 },
+  content:            { paddingHorizontal: 20, paddingBottom: 24 },
 
-  illustration:       { width: '100%', height: 120, borderRadius: radius.xl, alignItems: 'center', justifyContent: 'center' },
+  illustration:       { width: '100%', height: 120, borderRadius: radius.xl, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
   illustrationEmoji:  { fontSize: 64 },
 
-  question:           { fontSize: 30, fontFamily: fonts.bold, color: colors.textPrimary, lineHeight: 38, textAlign: 'center' },
+  question:           { fontSize: 30, fontFamily: fonts.bold, color: colors.textPrimary, lineHeight: 38, textAlign: 'center', marginBottom: 24 },
 
-  optionList:         { gap: 10 },
+  optionList:         { gap: 10, marginBottom: 16 },
   optionRow:          { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 16, paddingHorizontal: 18, borderRadius: radius.pill, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface },
   optionRowSelected:  { borderColor: colors.textPrimary },
   optionEmoji:        { fontSize: 24, width: 32, textAlign: 'center' },

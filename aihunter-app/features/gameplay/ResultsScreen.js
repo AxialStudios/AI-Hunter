@@ -74,12 +74,16 @@ export default function ResultsScreen({ route, navigation }) {
         {/* Percentage labels above images */}
         <View style={styles.pctRow}>
           <View style={styles.pctSide}>
-            <Text style={[styles.pctSymbol, { color: leftColor }]}>{leftSymbol}</Text>
+            <View style={[styles.symbolBadge, { backgroundColor: leftColor }]}>
+              <Text style={styles.symbolChar}>{leftSymbol}</Text>
+            </View>
             <Text style={[styles.pctNumber, { color: leftColor }]}>{leftPct}%</Text>
             <Text style={styles.pctTag}>{leftIsReal ? 'REAL' : 'AI'}</Text>
           </View>
           <View style={styles.pctSide}>
-            <Text style={[styles.pctSymbol, { color: rightColor }]}>{rightSymbol}</Text>
+            <View style={[styles.symbolBadge, { backgroundColor: rightColor }]}>
+              <Text style={styles.symbolChar}>{rightSymbol}</Text>
+            </View>
             <Text style={[styles.pctNumber, { color: rightColor }]}>{rightPct}%</Text>
             <Text style={styles.pctTag}>{!leftIsReal ? 'REAL' : 'AI'}</Text>
           </View>
@@ -151,8 +155,9 @@ const styles = StyleSheet.create({
 
   pctRow:    { flexDirection: 'row', width: '100%', gap: 10 },
   pctSide:   { flex: 1, alignItems: 'center', gap: 2 },
-  pctSymbol: { fontSize: 28, fontFamily: fonts.bold },
-  pctNumber: { fontSize: 22, fontFamily: fonts.bold, marginTop: -4 },
+  symbolBadge: { width: 34, height: 34, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
+  symbolChar:  { fontSize: 18, fontFamily: fonts.bold, color: '#FFFFFF' },
+  pctNumber:   { fontSize: 22, fontFamily: fonts.bold, marginTop: 2 },
   pctTag:    { fontSize: 10, fontFamily: fonts.semiBold, color: colors.textTertiary, letterSpacing: 1.5 },
 
   imageRow:    { flexDirection: 'row', width: '100%', gap: 10 },
@@ -166,7 +171,7 @@ const styles = StyleSheet.create({
   tellsBtnText: { fontSize: 14, fontFamily: fonts.semiBold, color: colors.textSecondary },
 
   tellsSection:    { width: '100%', gap: 12 },
-  tellsHeading:    { fontSize: 16, fontFamily: fonts.bold, color: colors.textPrimary },
+  tellsHeading:    { fontSize: 20, fontFamily: fonts.bold, color: colors.textPrimary, textAlign: 'center' },
   aiImage:         { width: '100%', aspectRatio: 0.9, borderRadius: radius.lg },
   tellsSubheading: { fontSize: 11, fontFamily: fonts.semiBold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: 1.2 },
   tellCard:        { backgroundColor: colors.surface, borderRadius: radius.md, padding: 14, gap: 4 },
