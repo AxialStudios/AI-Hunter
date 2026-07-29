@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { useHaptics } from '../../context/HapticsContext';
 import { colors, fonts, radius } from '../../constants/theme';
 
 const AGE_OPTIONS = [
@@ -43,6 +44,7 @@ const STEPS = [
 
 export default function OnboardingScreen({ navigation }) {
   const { user } = useAuth();
+  const { light, medium } = useHaptics();
   const [step, setStep]         = useState(0);
   const [ageRange, setAgeRange] = useState(null);
   const [region, setRegion]     = useState(null);
@@ -55,6 +57,7 @@ export default function OnboardingScreen({ navigation }) {
   const canContinue = !!stepValue && !under13;
 
   function handleSelect(value) {
+    light();
     if (step === 0) setAgeRange(value);
     if (step === 1) setRegion(value);
     if (step === 2) setFluency(value);
@@ -62,6 +65,7 @@ export default function OnboardingScreen({ navigation }) {
 
   async function handleContinue() {
     if (!canContinue || saving) return;
+    medium();
     if (step < STEPS.length - 1) { setStep(s => s + 1); return; }
     setSaving(true);
     setError(null);

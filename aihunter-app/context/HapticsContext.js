@@ -1,14 +1,14 @@
 import { createContext, useContext, useCallback } from 'react';
+import * as Haptics from 'expo-haptics';
 
 const HapticsContext = createContext(null);
 
 export function HapticsProvider({ children }) {
-  // Stubs — real expo-haptics calls wired in during gameplay polish pass
-  const light = useCallback(() => {}, []);
-  const medium = useCallback(() => {}, []);
-  const heavy = useCallback(() => {}, []);
-  const success = useCallback(() => {}, []);
-  const error = useCallback(() => {}, []);
+  const light   = useCallback(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),   []);
+  const medium  = useCallback(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium),  []);
+  const heavy   = useCallback(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy),   []);
+  const success = useCallback(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success), []);
+  const error   = useCallback(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error),   []);
 
   return (
     <HapticsContext.Provider value={{ light, medium, heavy, success, error }}>

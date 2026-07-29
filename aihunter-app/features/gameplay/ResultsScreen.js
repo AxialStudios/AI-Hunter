@@ -4,6 +4,7 @@ import {
   ScrollView, StyleSheet, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useHaptics } from '../../context/HapticsContext';
 import { colors, fonts, radius } from '../../constants/theme';
 
 const { width } = Dimensions.get('window');
@@ -11,6 +12,7 @@ const { width } = Dimensions.get('window');
 export default function ResultsScreen({ route, navigation }) {
   const { result, task } = route.params;
   const { was_correct, real_pct, ai_pct, total_votes } = result;
+  const { light } = useHaptics();
   const [showTells, setShowTells] = useState(false);
 
   return (
@@ -48,7 +50,7 @@ export default function ResultsScreen({ route, navigation }) {
 
         <TouchableOpacity
           style={styles.tellsBtn}
-          onPress={() => setShowTells(v => !v)}
+          onPress={() => { light(); setShowTells(v => !v); }}
         >
           <Text style={styles.tellsBtnText}>
             {showTells ? '▲  Hide tells' : '▼  See the tells'}
@@ -75,7 +77,7 @@ export default function ResultsScreen({ route, navigation }) {
 
         <TouchableOpacity
           style={styles.nextBtn}
-          onPress={() => navigation.navigate('Gameplay')}
+          onPress={() => { light(); navigation.navigate('Gameplay'); }}
         >
           <Text style={styles.nextBtnText}>Next Card  →</Text>
         </TouchableOpacity>

@@ -7,10 +7,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { useHaptics } from '../../context/HapticsContext';
 import { colors, fonts, radius } from '../../constants/theme';
 
 export default function GameplayScreen({ navigation }) {
   const { user } = useAuth();
+  const { medium, success, error: hapticError } = useHaptics();
   const [task, setTask]             = useState(null);
   const [leftIsReal, setLeftIsReal] = useState(true);
   const [loading, setLoading]       = useState(true);
@@ -58,6 +60,7 @@ export default function GameplayScreen({ navigation }) {
 
   async function handleTap(tappedLeft) {
     if (voting) return;
+    medium();
     setVoting(true);
 
     // tappedLeft===leftIsReal means they tapped the real image → correct
@@ -78,6 +81,7 @@ export default function GameplayScreen({ navigation }) {
       return;
     }
 
+    data.was_correct ? success() : hapticError();
     navigation.navigate('Results', { result: data, task, leftIsReal });
   }
 
