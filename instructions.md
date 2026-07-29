@@ -128,6 +128,7 @@ You can, on your iPhone: complete onboarding → see a card → tap the real ima
 - **Content engine / marketing** (villain = *deception itself*, "See Through the Lies"; real people & specific companies off-limits)
 - Monthly "Deception Report" from the event log
 - Data-licensing outreach (detection companies, trust & safety, academia) — treat as upside, not the plan
+- Deep analylitics for my ends such as total rounds played, active users, etc
 
 ---
 
