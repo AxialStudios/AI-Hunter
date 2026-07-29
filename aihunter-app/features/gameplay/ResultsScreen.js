@@ -3,6 +3,7 @@ import {
   View, Text, Image, Animated, TouchableOpacity,
   ScrollView, StyleSheet, Dimensions,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHaptics } from '../../context/HapticsContext';
 import { supabase } from '../../lib/supabase';
@@ -28,36 +29,34 @@ export default function ResultsScreen({ route, navigation }) {
   const rightFill = !leftIsReal ? CORRECT_FILL   : INCORRECT_FILL;
   const leftColor  = leftIsReal  ? colors.correct   : colors.incorrect;
   const rightColor = !leftIsReal ? colors.correct   : colors.incorrect;
-  const leftSymbol  = leftIsReal  ? '✓' : '✗';
-  const rightSymbol = !leftIsReal ? '✓' : '✗';
 
   const leftUrl  = leftIsReal ? task.real_image_url : task.ai_image_url;
   const rightUrl = leftIsReal ? task.ai_image_url   : task.real_image_url;
 
-  const leftAnim  = useRef(new Animated.Value(0)).current;
-  const rightAnim = useRef(new Animated.Value(0)).current;
+  const leftAnim      = useRef(new Animated.Value(0)).current;
+  const rightAnim     = useRef(new Animated.Value(0)).current;
+  const imageFadeAnim = useRef(new Animated.Value(0)).current;
+  const loadCount     = useRef(0);
 
   useEffect(() => {
-    // Kick off next-card prefetch while user reads their result
     prefetchNextTask(supabase);
-
-    // Animate fills after a short pause
-    const t = setTimeout(() => {
-      Animated.parallel([
-        Animated.timing(leftAnim, {
-          toValue: CARD_H * leftPct / 100,
-          duration: 700,
-          useNativeDriver: false,
-        }),
-        Animated.timing(rightAnim, {
-          toValue: CARD_H * rightPct / 100,
-          duration: 700,
-          useNativeDriver: false,
-        }),
-      ]).start();
-    }, 250);
-    return () => clearTimeout(t);
   }, []);
+
+  function handleImageLoad() {
+    loadCount.current += 1;
+    if (loadCount.current === 2) {
+      const leftH  = CARD_H * leftPct  / 100;
+      const rightH = CARD_H * rightPct / 100;
+      Animated.sequence([
+        Animated.timing(imageFadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+        Animated.delay(100),
+        Animated.parallel([
+          Animated.timing(leftAnim,  { toValue: leftH,  duration: 700, useNativeDriver: false }),
+          Animated.timing(rightAnim, { toValue: rightH, duration: 700, useNativeDriver: false }),
+        ]),
+      ]).start();
+    }
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -75,29 +74,39 @@ export default function ResultsScreen({ route, navigation }) {
         <View style={styles.pctRow}>
           <View style={styles.pctSide}>
             <View style={[styles.symbolBadge, { backgroundColor: leftColor }]}>
-              <Text style={styles.symbolChar}>{leftSymbol}</Text>
+              <Feather name={leftIsReal ? 'check' : 'x'} size={18} color="#FFFFFF" />
             </View>
             <Text style={[styles.pctNumber, { color: leftColor }]}>{leftPct}%</Text>
             <Text style={styles.pctTag}>{leftIsReal ? 'REAL' : 'AI'}</Text>
           </View>
           <View style={styles.pctSide}>
             <View style={[styles.symbolBadge, { backgroundColor: rightColor }]}>
-              <Text style={styles.symbolChar}>{rightSymbol}</Text>
+              <Feather name={!leftIsReal ? 'check' : 'x'} size={18} color="#FFFFFF" />
             </View>
             <Text style={[styles.pctNumber, { color: rightColor }]}>{rightPct}%</Text>
             <Text style={styles.pctTag}>{!leftIsReal ? 'REAL' : 'AI'}</Text>
           </View>
         </View>
 
-        {/* Images with animated fill from bottom */}
+        {/* Images with animated fill from bottom — both reveal simultaneously */}
         <View style={styles.imageRow}>
           <View style={styles.imageWrapper}>
-            <Image source={{ uri: leftUrl }} style={styles.image} resizeMode="cover" />
+            <Animated.Image
+              source={{ uri: leftUrl }}
+              style={[styles.image, { opacity: imageFadeAnim }]}
+              resizeMode="cover"
+              onLoadEnd={handleImageLoad}
+            />
             <Animated.View style={[styles.fill, { height: leftAnim, backgroundColor: leftFill }]} />
           </View>
 
           <View style={styles.imageWrapper}>
-            <Image source={{ uri: rightUrl }} style={styles.image} resizeMode="cover" />
+            <Animated.Image
+              source={{ uri: rightUrl }}
+              style={[styles.image, { opacity: imageFadeAnim }]}
+              resizeMode="cover"
+              onLoadEnd={handleImageLoad}
+            />
             <Animated.View style={[styles.fill, { height: rightAnim, backgroundColor: rightFill }]} />
           </View>
         </View>
@@ -153,12 +162,11 @@ const styles = StyleSheet.create({
   verdictIncorrect: { color: colors.incorrect },
   subtitle:         { fontSize: 15, fontFamily: fonts.medium, color: colors.textSecondary, textAlign: 'center', marginTop: -8 },
 
-  pctRow:    { flexDirection: 'row', width: '100%', gap: 10 },
-  pctSide:   { flex: 1, alignItems: 'center', gap: 2 },
+  pctRow:      { flexDirection: 'row', width: '100%', gap: 10 },
+  pctSide:     { flex: 1, alignItems: 'center', gap: 2 },
   symbolBadge: { width: 34, height: 34, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
-  symbolChar:  { fontSize: 18, fontFamily: fonts.bold, color: '#FFFFFF' },
   pctNumber:   { fontSize: 22, fontFamily: fonts.bold, marginTop: 2 },
-  pctTag:    { fontSize: 10, fontFamily: fonts.semiBold, color: colors.textTertiary, letterSpacing: 1.5 },
+  pctTag:      { fontSize: 10, fontFamily: fonts.semiBold, color: colors.textTertiary, letterSpacing: 1.5 },
 
   imageRow:    { flexDirection: 'row', width: '100%', gap: 10 },
   imageWrapper: { flex: 1, aspectRatio: 0.5, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.surface },
