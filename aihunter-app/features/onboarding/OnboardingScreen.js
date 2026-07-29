@@ -3,8 +3,10 @@ import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { colors, fonts, radius } from '../../constants/theme';
 
 const AGE_RANGES = ['Under 13', '13–17', '18–24', '25–34', '35–44', '45–54', '55+'];
 
@@ -53,6 +55,7 @@ export default function OnboardingScreen({ navigation }) {
   }
 
   return (
+    <SafeAreaView style={styles.safe}>
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Before you play</Text>
 
@@ -97,10 +100,11 @@ export default function OnboardingScreen({ navigation }) {
         disabled={!canProceed || saving}
       >
         {saving
-          ? <ActivityIndicator color="#fff" />
-          : <Text style={styles.buttonText}>Agree &amp; play</Text>}
+          ? <ActivityIndicator color={colors.bg} />
+          : <Text style={[styles.buttonText, !canProceed && styles.buttonTextDisabled]}>Agree &amp; play</Text>}
       </TouchableOpacity>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -137,22 +141,29 @@ function ChipWide({ label, sub, selected, onPress }) {
 }
 
 const styles = StyleSheet.create({
-  container:        { padding: 24, paddingBottom: 48 },
-  title:            { fontSize: 26, fontWeight: '700', marginBottom: 28, marginTop: 16 },
-  section:          { marginBottom: 24 },
-  sectionLabel:     { fontSize: 15, fontWeight: '600', marginBottom: 10, color: '#333' },
-  chips:            { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip:             { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: '#ccc', backgroundColor: '#f5f5f5' },
-  chipWide:         { width: '100%', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, borderWidth: 1.5, borderColor: '#ccc', backgroundColor: '#f5f5f5', marginBottom: 4 },
-  chipSelected:     { borderColor: '#4A90E2', backgroundColor: '#EBF3FB' },
-  chipText:         { fontSize: 14, color: '#444' },
-  chipTextSelected: { color: '#1a6bb5', fontWeight: '600' },
-  chipSub:          { fontSize: 12, color: '#777', marginTop: 2 },
-  chipSubSelected:  { color: '#4A90E2' },
-  ageGate:          { color: '#c0392b', marginBottom: 16, fontWeight: '600' },
-  consent:          { fontSize: 12, color: '#666', lineHeight: 18, marginBottom: 24, marginTop: 4 },
-  error:            { color: '#c0392b', marginBottom: 12 },
-  button:           { backgroundColor: '#4A90E2', paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
-  buttonDisabled:   { backgroundColor: '#aac8ee' },
-  buttonText:       { color: '#fff', fontSize: 17, fontWeight: '700' },
+  safe:              { flex: 1, backgroundColor: colors.bg },
+  container:         { padding: 24, paddingBottom: 48 },
+  title:             { fontSize: 28, fontFamily: fonts.bold, color: colors.textPrimary, marginBottom: 32, marginTop: 8 },
+
+  section:           { marginBottom: 28 },
+  sectionLabel:      { fontSize: 13, fontFamily: fonts.semiBold, color: colors.textSecondary, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.8 },
+  chips:             { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+
+  chip:              { paddingHorizontal: 16, paddingVertical: 10, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.surface },
+  chipSelected:      { borderColor: colors.textPrimary, backgroundColor: colors.surface },
+  chipText:          { fontSize: 14, fontFamily: fonts.medium, color: colors.textSecondary },
+  chipTextSelected:  { color: colors.textPrimary },
+
+  chipWide:          { width: '100%', paddingHorizontal: 16, paddingVertical: 14, borderRadius: radius.lg, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.surface, marginBottom: 8 },
+  chipSub:           { fontSize: 12, fontFamily: fonts.regular, color: colors.textTertiary, marginTop: 3 },
+  chipSubSelected:   { color: colors.textSecondary },
+
+  ageGate:           { color: colors.incorrect, marginBottom: 16, fontFamily: fonts.semiBold, fontSize: 13 },
+  consent:           { fontSize: 12, fontFamily: fonts.regular, color: colors.textTertiary, lineHeight: 18, marginBottom: 28, marginTop: 4 },
+  error:             { color: colors.incorrect, marginBottom: 12, fontFamily: fonts.medium, fontSize: 13 },
+
+  button:            { backgroundColor: colors.textPrimary, paddingVertical: 18, borderRadius: radius.pill, alignItems: 'center' },
+  buttonDisabled:    { backgroundColor: colors.surface2 },
+  buttonText:        { color: colors.bg, fontSize: 17, fontFamily: fonts.bold },
+  buttonTextDisabled:{ color: colors.textTertiary },
 });

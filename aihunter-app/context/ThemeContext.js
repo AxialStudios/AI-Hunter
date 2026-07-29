@@ -1,15 +1,7 @@
 import { createContext, useContext } from 'react';
+import { colors, fonts, radius } from '../constants/theme';
 
-const theme = {
-  colors: {
-    background: '#000000',
-    surface: '#1a1a1a',
-    primary: '#ffffff',
-    secondary: '#888888',
-    correct: '#4caf50',
-    incorrect: '#f44336',
-  },
-};
+const theme = { colors, fonts, radius };
 
 const ThemeContext = createContext(theme);
 

@@ -1,14 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, Image, TouchableOpacity,
-  StyleSheet, ActivityIndicator, Dimensions,
+  StyleSheet, ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
-
-const { width } = Dimensions.get('window');
-const IMAGE_WIDTH  = (width - 48) / 2;
-const IMAGE_HEIGHT = IMAGE_WIDTH * 1.35;
+import { colors, fonts, radius } from '../../constants/theme';
 
 export default function GameplayScreen({ navigation }) {
   const { user } = useAuth();
@@ -19,7 +18,7 @@ export default function GameplayScreen({ navigation }) {
   const [error, setError]           = useState(null);
   const startTime = useRef(Date.now());
 
-  useEffect(() => { fetchTask(); }, []);
+  useFocusEffect(useCallback(() => { fetchTask(); }, []));
 
   async function fetchTask() {
     setLoading(true);
@@ -85,7 +84,7 @@ export default function GameplayScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator color={colors.textPrimary} />
       </View>
     );
   }
@@ -93,7 +92,7 @@ export default function GameplayScreen({ navigation }) {
   if (error) {
     return (
       <View style={styles.center}>
-        <Text style={styles.error}>{error}</Text>
+        <Text style={styles.errorText}>{error}</Text>
       </View>
     );
   }
@@ -102,13 +101,13 @@ export default function GameplayScreen({ navigation }) {
   const rightUrl = leftIsReal ? task.ai_image_url   : task.real_image_url;
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Text style={styles.prompt}>Tap the real image</Text>
 
       <View style={styles.imageRow}>
         <TouchableOpacity
           style={styles.imageWrapper}
-          activeOpacity={0.85}
+          activeOpacity={voting ? 1 : 0.9}
           onPress={() => handleTap(true)}
           disabled={voting}
         >
@@ -117,7 +116,7 @@ export default function GameplayScreen({ navigation }) {
 
         <TouchableOpacity
           style={styles.imageWrapper}
-          activeOpacity={0.85}
+          activeOpacity={voting ? 1 : 0.9}
           onPress={() => handleTap(false)}
           disabled={voting}
         >
@@ -125,18 +124,22 @@ export default function GameplayScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {voting && <ActivityIndicator style={styles.spinner} />}
-    </View>
+      {voting && (
+        <View style={styles.votingOverlay}>
+          <ActivityIndicator color={colors.textPrimary} />
+        </View>
+      )}
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  center:       { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  container:    { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16 },
-  prompt:       { fontSize: 22, fontWeight: '700', marginBottom: 24, textAlign: 'center' },
-  imageRow:     { flexDirection: 'row', gap: 16 },
-  imageWrapper: { borderRadius: 12, overflow: 'hidden' },
-  image:        { width: IMAGE_WIDTH, height: IMAGE_HEIGHT },
-  spinner:      { marginTop: 24 },
-  error:        { color: 'red', fontSize: 16 },
+  center:        { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
+  errorText:     { color: colors.incorrect, fontSize: 16, fontFamily: fonts.medium },
+  container:     { flex: 1, backgroundColor: colors.bg, padding: 16, gap: 20, justifyContent: 'center' },
+  prompt:        { fontSize: 20, fontFamily: fonts.semiBold, color: colors.textSecondary, textAlign: 'center' },
+  imageRow:      { flexDirection: 'row', gap: 10 },
+  imageWrapper:  { flex: 1, aspectRatio: 0.62, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.surface },
+  image:         { width: '100%', height: '100%' },
+  votingOverlay: { position: 'absolute', bottom: 32, left: 0, right: 0, alignItems: 'center' },
 });
