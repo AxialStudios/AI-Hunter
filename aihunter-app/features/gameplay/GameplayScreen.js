@@ -17,6 +17,7 @@ export default function GameplayScreen({ navigation }) {
   const [leftIsReal, setLeftIsReal] = useState(true);
   const [loading, setLoading]       = useState(true);
   const [voting, setVoting]         = useState(false);
+  const [tappedSide, setTappedSide] = useState(null);
   const [error, setError]           = useState(null);
   const startTime = useRef(Date.now());
 
@@ -54,6 +55,7 @@ export default function GameplayScreen({ navigation }) {
 
     setTask(data);
     setLeftIsReal(Math.random() > 0.5);
+    setTappedSide(null);
     startTime.current = Date.now();
     setLoading(false);
   }
@@ -61,6 +63,7 @@ export default function GameplayScreen({ navigation }) {
   async function handleTap(tappedLeft) {
     if (voting) return;
     medium();
+    setTappedSide(tappedLeft ? 'left' : 'right');
     setVoting(true);
 
     // tappedLeft===leftIsReal means they tapped the real image → correct
@@ -110,7 +113,7 @@ export default function GameplayScreen({ navigation }) {
 
       <View style={styles.imageRow}>
         <TouchableOpacity
-          style={styles.imageWrapper}
+          style={[styles.imageWrapper, tappedSide === 'left' && styles.imageWrapperSelected]}
           activeOpacity={voting ? 1 : 0.9}
           onPress={() => handleTap(true)}
           disabled={voting}
@@ -119,7 +122,7 @@ export default function GameplayScreen({ navigation }) {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.imageWrapper}
+          style={[styles.imageWrapper, tappedSide === 'right' && styles.imageWrapperSelected]}
           activeOpacity={voting ? 1 : 0.9}
           onPress={() => handleTap(false)}
           disabled={voting}
@@ -140,10 +143,11 @@ export default function GameplayScreen({ navigation }) {
 const styles = StyleSheet.create({
   center:        { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
   errorText:     { color: colors.incorrect, fontSize: 16, fontFamily: fonts.medium },
-  container:     { flex: 1, backgroundColor: colors.bg, padding: 16, gap: 20, justifyContent: 'center' },
-  prompt:        { fontSize: 20, fontFamily: fonts.semiBold, color: colors.textSecondary, textAlign: 'center' },
-  imageRow:      { flexDirection: 'row', gap: 10 },
-  imageWrapper:  { flex: 1, aspectRatio: 0.62, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.surface },
-  image:         { width: '100%', height: '100%' },
+  container:            { flex: 1, backgroundColor: colors.bg, padding: 16, paddingTop: 20, gap: 20 },
+  prompt:               { fontSize: 20, fontFamily: fonts.semiBold, color: colors.textPrimary, textAlign: 'center' },
+  imageRow:             { flexDirection: 'row', gap: 10 },
+  imageWrapper:         { flex: 1, aspectRatio: 0.62, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.surface, borderWidth: 3, borderColor: 'transparent' },
+  imageWrapperSelected: { borderColor: colors.textPrimary },
+  image:                { width: '100%', height: '100%' },
   votingOverlay: { position: 'absolute', bottom: 32, left: 0, right: 0, alignItems: 'center' },
 });

@@ -89,7 +89,7 @@ export default function ResultsScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   safe:             { flex: 1, backgroundColor: colors.bg },
-  container:        { alignItems: 'center', padding: 24, paddingBottom: 48 },
+  container:        { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24, paddingBottom: 48 },
 
   verdict:          { fontSize: 52, fontFamily: fonts.bold, marginTop: 16, marginBottom: 6 },
   verdictCorrect:   { color: colors.correct },
