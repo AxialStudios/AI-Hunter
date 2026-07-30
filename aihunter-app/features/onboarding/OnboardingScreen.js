@@ -104,16 +104,16 @@ export default function OnboardingScreen({ navigation }) {
         <View style={styles.backBtn} />
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-
-        {/* Illustration */}
+      {/* Illustration + Question: fixed above pills so spacing is always consistent */}
+      <View style={styles.topSection}>
         <View style={[styles.illustration, { backgroundColor: current.accentBg }]}>
           <Text style={styles.illustrationEmoji}>{current.emoji}</Text>
         </View>
-
         <Text style={styles.question}>{current.question}</Text>
+      </View>
 
-        {/* Option pills */}
+      {/* Pills scroll independently beneath the fixed header block */}
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.pillsContent} showsVerticalScrollIndicator={false}>
         <View style={styles.optionList}>
           {current.options.map(opt => (
             <OptionRow
@@ -139,7 +139,6 @@ export default function OnboardingScreen({ navigation }) {
         )}
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
       </ScrollView>
 
       {/* Footer */}
@@ -190,13 +189,14 @@ const styles = StyleSheet.create({
   progressSegment:    { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.surface2 },
   progressActive:     { backgroundColor: colors.textPrimary },
 
-  content:            { paddingHorizontal: 20, paddingBottom: 24 },
-
-  illustration:       { width: '100%', height: 80, borderRadius: radius.xl, alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
+  // Illustration + question live outside the ScrollView so their
+  // vertical position is fixed relative to the screen, not the scroll content.
+  topSection:         { paddingHorizontal: 20 },
+  illustration:       { width: '100%', height: 80, borderRadius: radius.xl, alignItems: 'center', justifyContent: 'center', marginBottom: 32 },
   illustrationEmoji:  { fontSize: 44 },
+  question:           { fontSize: 30, fontFamily: fonts.bold, color: colors.textPrimary, lineHeight: 38, textAlign: 'center', marginBottom: 32 },
 
-  question:           { fontSize: 30, fontFamily: fonts.bold, color: colors.textPrimary, lineHeight: 38, textAlign: 'center', marginBottom: 24 },
-
+  pillsContent:       { paddingHorizontal: 20, paddingBottom: 24 },
   optionList:         { gap: 10, marginBottom: 16 },
   optionRow:          { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 16, paddingHorizontal: 18, borderRadius: radius.pill, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface },
   optionRowSelected:  { borderColor: colors.textPrimary },
