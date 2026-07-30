@@ -37,9 +37,9 @@ const FLUENCY_OPTIONS = [
 ];
 
 const STEPS = [
-  { key: 'age',     emoji: '📅', accentBg: '#1C1200', question: 'How old are you?',                        options: AGE_OPTIONS },
-  { key: 'region',  emoji: '🌍', accentBg: '#001419', question: 'Where are you from?',                     options: REGION_OPTIONS },
-  { key: 'fluency', emoji: '🤖', accentBg: '#130019', question: 'How familiar are you\nwith AI images?',   options: FLUENCY_OPTIONS },
+  { key: 'age',     emoji: '📅', question: 'How old are you?',                      options: AGE_OPTIONS },
+  { key: 'region',  emoji: '🌍', question: 'Where are you from?',                   options: REGION_OPTIONS },
+  { key: 'fluency', emoji: '🤖', question: 'How familiar are you\nwith AI images?', options: FLUENCY_OPTIONS },
 ];
 
 export default function OnboardingScreen({ navigation }) {
@@ -106,9 +106,7 @@ export default function OnboardingScreen({ navigation }) {
 
       {/* Illustration + Question: fixed above pills so spacing is always consistent */}
       <View style={styles.topSection}>
-        <View style={[styles.illustration, { backgroundColor: current.accentBg }]}>
-          <Text style={styles.illustrationEmoji}>{current.emoji}</Text>
-        </View>
+        <Text style={styles.illustrationEmoji}>{current.emoji}</Text>
         <Text style={styles.question}>{current.question}</Text>
       </View>
 
@@ -192,8 +190,7 @@ const styles = StyleSheet.create({
   // Illustration + question live outside the ScrollView so their
   // vertical position is fixed relative to the screen, not the scroll content.
   topSection:         { paddingHorizontal: 20 },
-  illustration:       { width: '100%', height: 120, borderRadius: radius.xl, alignItems: 'center', justifyContent: 'center', marginBottom: 28 },
-  illustrationEmoji:  { fontSize: 64 },
+  illustrationEmoji:  { fontSize: 72, textAlign: 'center', marginBottom: 28 },
   question:           { fontSize: 30, fontFamily: fonts.bold, color: colors.textPrimary, lineHeight: 38, textAlign: 'center', marginBottom: 28 },
 
   pillsContent:       { paddingHorizontal: 20, paddingBottom: 24 },
