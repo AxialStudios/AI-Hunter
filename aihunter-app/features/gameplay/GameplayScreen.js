@@ -248,20 +248,6 @@ export default function GameplayScreen() {
           style={[StyleSheet.absoluteFill, styles.resultsLayer, { opacity: resultsOpacity }]}
           pointerEvents={phase === 'results' ? 'box-none' : 'none'}
         >
-          {/* Pre-render AI image at tells display size so iOS decodes it before tells open.
-              Invisible + no pointer events — zero UX impact. */}
-          {result && !showTells && (
-            <View
-              pointerEvents="none"
-              style={{ position: 'absolute', opacity: 0, width: SW - 32, height: Math.floor((SW - 32) / 0.9) }}
-            >
-              <Image
-                source={{ uri: task?.ai_image_url }}
-                style={{ width: '100%', height: '100%' }}
-                resizeMode="cover"
-              />
-            </View>
-          )}
 
           {/* Single full-screen ScrollView — everything scrolls together */}
           <ScrollView
@@ -326,20 +312,27 @@ export default function GameplayScreen() {
               <View style={styles.bottomContent}>
                 <Text style={styles.totalVotes}>{result.total_votes.toLocaleString()} total votes</Text>
 
-                <TouchableOpacity style={styles.tellsBtn} onPress={() => { light(); setShowTells(v => !v); }}>
-                  <Text style={styles.tellsBtnText}>{showTells ? '▲  Hide tells' : '▼  See the tells'}</Text>
-                </TouchableOpacity>
+                {/* Side-by-side action row */}
+                <View style={styles.actionRow}>
+                  <TouchableOpacity style={styles.tellsBtn} onPress={() => { light(); setShowTells(v => !v); }}>
+                    <Text style={styles.tellsBtnText}>{showTells ? '▲  Hide tells' : '▼  See the tells'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.nextBtn} onPress={handleNextCard}>
+                    <Text style={styles.nextBtnText}>Next Card  →</Text>
+                  </TouchableOpacity>
+                </View>
 
-                {showTells && (
-                  <View style={styles.tellsSection}>
-                    <Text style={styles.tellsHeading}>The AI image</Text>
+                {/* Tells section: outer collapses to height 0 (not unmounted) so the
+                    Image stays mounted and fully decoded — no flash when opening. */}
+                <View style={[styles.tellsSection, !showTells && styles.collapsedTells]}>
+                  {showTells && <Text style={styles.tellsHeading}>The AI image</Text>}
 
-                    <View
-                      style={styles.aiImageWrapper}
-                      onLayout={e => setAiLayout(e.nativeEvent.layout)}
-                    >
-                      <Image source={{ uri: task?.ai_image_url }} style={styles.aiImage} resizeMode="cover" />
-                      {aiLayout.width > 0 && tells.map((tell, i) => {
+                  <View
+                    style={styles.aiImageWrapper}
+                    onLayout={e => { const l = e.nativeEvent.layout; if (l.width > 0) setAiLayout(l); }}
+                  >
+                    <Image source={{ uri: task?.ai_image_url }} style={styles.aiImage} resizeMode="cover" />
+                    {showTells && aiLayout.width > 0 && aiLayout.height > 0 && tells.map((tell, i) => {
                         if (tell.x == null || tell.y == null) return null;
                         const r  = Math.max(26, (tell.radius ?? 0.09) * aiLayout.width);
                         const cx = tell.x * aiLayout.width;
@@ -361,8 +354,8 @@ export default function GameplayScreen() {
                       })}
                     </View>
 
-                    <Text style={styles.tellsSubheading}>What to look for</Text>
-                    {tells.map((tell, i) => (
+                    {showTells && <Text style={styles.tellsSubheading}>What to look for</Text>}
+                    {showTells && tells.map((tell, i) => (
                       <TouchableOpacity
                         key={i}
                         style={styles.tellCard}
@@ -377,11 +370,6 @@ export default function GameplayScreen() {
                       </TouchableOpacity>
                     ))}
                   </View>
-                )}
-
-                <TouchableOpacity style={styles.nextBtn} onPress={handleNextCard}>
-                  <Text style={styles.nextBtnText}>Next Card  →</Text>
-                </TouchableOpacity>
               </View>
             )}
           </ScrollView>
@@ -467,14 +455,16 @@ const styles = StyleSheet.create({
   pctSide:     { flex: 1, alignItems: 'center', gap: 2 },
   symbolBadge: { width: 30, height: 30, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
   pctNumber:   { fontSize: 20, fontFamily: fonts.bold, marginTop: 2 },
-  pctTag:      { fontSize: 10, fontFamily: fonts.semiBold, color: colors.textTertiary, letterSpacing: 1.5 },
+  pctTag:      { fontSize: 10, fontFamily: fonts.semiBold, color: colors.textPrimary, letterSpacing: 1.5 },
 
   // ── Bottom content (inside results ScrollView) ────────────────
   totalVotes:    { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center' },
-  tellsBtn:      { paddingVertical: 12, paddingHorizontal: 28, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.pill, alignSelf: 'center' },
+  actionRow:     { flexDirection: 'row', gap: 10 },
+  tellsBtn:      { flex: 1, paddingVertical: 15, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   tellsBtnText:  { fontSize: 14, fontFamily: fonts.semiBold, color: colors.textSecondary },
 
   // ── Tells section ─────────────────────────────────────────────
+  collapsedTells:  { height: 0, overflow: 'hidden' },
   tellsSection:    { gap: 12 },
   tellsHeading:    { fontSize: 18, fontFamily: fonts.bold, color: colors.textPrimary, textAlign: 'center' },
   aiImageWrapper:  { width: '100%', aspectRatio: 0.9, borderRadius: radius.lg, overflow: 'hidden' },
@@ -491,7 +481,7 @@ const styles = StyleSheet.create({
   tellLabel:       { fontSize: 16, fontFamily: fonts.bold, color: colors.textPrimary, flex: 1 },
   tellDescription: { fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 21 },
 
-  nextBtn:     { backgroundColor: colors.textPrimary, paddingVertical: 18, paddingHorizontal: 48, borderRadius: radius.pill, alignSelf: 'center' },
+  nextBtn:     { flex: 1, backgroundColor: colors.textPrimary, paddingVertical: 18, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   nextBtnText: { color: colors.bg, fontSize: 17, fontFamily: fonts.bold },
 
   // ── Zoom modal ────────────────────────────────────────────────
