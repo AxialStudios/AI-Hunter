@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import {
-  View, Text, Image, Animated, TouchableOpacity, Modal,
+  View, Text, Image, Animated, TouchableOpacity,
   ScrollView, StyleSheet, Dimensions, ActivityIndicator,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -38,6 +38,7 @@ export default function GameplayScreen() {
 
   const [showTells, setShowTells] = useState(false);
   const [zoomTell,  setZoomTell]  = useState(null);
+  const zoomTellRef = useRef(null); // locked coords — never null while modal is visible
   const [aiLayout,  setAiLayout]  = useState({ width: 0, height: 0 });
 
   // Increment on every fetchTask so images always remount even if task.id repeats
@@ -183,8 +184,7 @@ export default function GameplayScreen() {
   const tells          = task ? (task.tell_annotations || []) : [];
 
   return (
-    <>
-      <View style={styles.root}>
+    <View style={styles.root}>
 
         {/* Always-opaque dark backstop: shows when both animated layers are at opacity 0 */}
         <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bg }]} />
@@ -344,7 +344,7 @@ export default function GameplayScreen() {
                           <TouchableOpacity
                             key={i}
                             style={[styles.highlight, { left: cx - r, top: cy - r, width: r * 2, height: r * 2, borderRadius: r }]}
-                            onPress={() => { light(); setZoomTell(tell); }}
+                            onPress={() => { light(); zoomTellRef.current = tell; setZoomTell(tell); }}
                             activeOpacity={0.75}
                           >
                             <Animated.View style={[styles.highlightFill, { borderRadius: r, opacity, transform: [{ scale }] }]} />
@@ -360,7 +360,7 @@ export default function GameplayScreen() {
                       <TouchableOpacity
                         key={i}
                         style={styles.tellCard}
-                        onPress={() => tell.x != null && (light(), setZoomTell(tell))}
+                        onPress={() => tell.x != null && (light(), zoomTellRef.current = tell, setZoomTell(tell))}
                         activeOpacity={tell.x != null ? 0.72 : 1}
                       >
                         <View style={styles.tellCardHeader}>
@@ -376,47 +376,44 @@ export default function GameplayScreen() {
           </ScrollView>
         </Animated.View>
 
+      {/* ── ZOOM OVERLAY ─ always in native layer so image stays GPU-composited ── */}
+      <View
+        style={[StyleSheet.absoluteFillObject, styles.modalContainer, { paddingTop: insets.top, opacity: zoomTell ? 1 : 0.001 }]}
+        pointerEvents={zoomTell ? 'auto' : 'none'}
+      >
+        <View style={styles.modalHeader}>
+          <TouchableOpacity onPress={() => { light(); setZoomTell(null); }} style={styles.modalCloseBtn}>
+            <Feather name="x" size={22} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <Text style={styles.modalTitle} numberOfLines={1}>{zoomTellRef.current?.label}</Text>
+          <View style={{ width: 44 }} />
+        </View>
+
+        <View style={styles.modalImageArea}>
+          <Image
+            source={{ uri: task?.ai_image_url }}
+            style={[styles.modalImage, {
+              transform: [
+                { translateX: -((zoomTellRef.current?.x ?? 0.5) - 0.5) * SW * MODAL_ZOOM },
+                { translateY: -((zoomTellRef.current?.y ?? 0.5) - 0.5) * MODAL_IMG_H * MODAL_ZOOM },
+                { scale: MODAL_ZOOM },
+              ],
+            }]}
+            resizeMode="cover"
+          />
+        </View>
+
+        <View style={[styles.modalFooter, { paddingBottom: insets.bottom + 72 }]}>
+          <Text style={styles.modalDescription}>{zoomTellRef.current?.description}</Text>
+          <TouchableOpacity style={styles.modalDoneBtn} onPress={() => { light(); setZoomTell(null); }}>
+            <Text style={styles.modalDoneText}>Done</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* ── ZOOM MODAL ──────────────────────────────────────── */}
-      <Modal
-        visible={!!zoomTell}
-        animationType="fade"
-        onRequestClose={() => setZoomTell(null)}
-      >
-        <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => { light(); setZoomTell(null); }} style={styles.modalCloseBtn}>
-              <Feather name="x" size={22} color={colors.textPrimary} />
-            </TouchableOpacity>
-            <Text style={styles.modalTitle} numberOfLines={1}>{zoomTell?.label}</Text>
-            <View style={{ width: 44 }} />
-          </View>
-
-          <View style={styles.modalImageArea}>
-            <Image
-              source={{ uri: task?.ai_image_url }}
-              style={[styles.modalImage, {
-                transform: [
-                  { translateX: -((zoomTell?.x ?? 0.5) - 0.5) * SW * MODAL_ZOOM },
-                  { translateY: -((zoomTell?.y ?? 0.5) - 0.5) * MODAL_IMG_H * MODAL_ZOOM },
-                  { scale: MODAL_ZOOM },
-                ],
-              }]}
-              resizeMode="cover"
-            />
-          </View>
-
-          <View style={[styles.modalFooter, { paddingBottom: insets.bottom + 72 }]}>
-            <Text style={styles.modalDescription}>{zoomTell?.description}</Text>
-            <TouchableOpacity style={styles.modalDoneBtn} onPress={() => { light(); setZoomTell(null); }}>
-              <Text style={styles.modalDoneText}>Done</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-    </>
+    </View>
   );
+
 }
 
 const styles = StyleSheet.create({
