@@ -452,11 +452,11 @@ const styles = StyleSheet.create({
   fill:                 { position: 'absolute', bottom: 0, left: 0, right: 0 },
 
   // ── Pct badges ────────────────────────────────────────────────
-  pctRow:      { flexDirection: 'row', paddingHorizontal: 16 },
+  pctRow:      { flexDirection: 'row', paddingHorizontal: 16, marginTop: -5 },
   pctSide:     { flex: 1, alignItems: 'center', gap: 2 },
   symbolBadge: { width: 30, height: 30, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
   pctNumber:   { fontSize: 20, fontFamily: fonts.bold, marginTop: 2 },
-  pctTag:      { fontSize: 10, fontFamily: fonts.semiBold, color: colors.textPrimary, letterSpacing: 1.5 },
+  pctTag:      { fontSize: 11, fontFamily: fonts.semiBold, color: colors.textPrimary, letterSpacing: 1.5 },
 
   // ── Bottom content (inside results ScrollView) ────────────────
   totalVotes:    { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center' },
