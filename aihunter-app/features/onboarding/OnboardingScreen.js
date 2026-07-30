@@ -198,13 +198,13 @@ const styles = StyleSheet.create({
   optionRow:          { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 16, paddingHorizontal: 18, borderRadius: radius.pill, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface },
   optionRowSelected:  { borderColor: colors.textPrimary },
   optionEmoji:        { fontSize: 24, width: 32, textAlign: 'center' },
-  optionLabel:        { fontSize: 16, fontFamily: fonts.semiBold, color: colors.textSecondary },
+  optionLabel:        { fontSize: 17, fontFamily: fonts.semiBold, color: '#CCCCCC' },
   optionLabelSelected:{ color: colors.textPrimary },
-  optionSub:          { fontSize: 13, fontFamily: fonts.regular, color: colors.textTertiary, marginTop: 2 },
+  optionSub:          { fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary, marginTop: 2 },
   checkmark:          { fontSize: 16, color: colors.textPrimary, fontFamily: fonts.bold },
 
   ageGate:            { color: colors.incorrect, fontFamily: fonts.semiBold, fontSize: 14, textAlign: 'center' },
-  consent:            { fontSize: 12, fontFamily: fonts.regular, color: colors.textTertiary, lineHeight: 19, textAlign: 'center' },
+  consent:            { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 20, textAlign: 'center' },
   errorText:          { color: colors.incorrect, fontFamily: fonts.medium, fontSize: 13, textAlign: 'center' },
 
   footer:             { padding: 20, paddingBottom: 16 },

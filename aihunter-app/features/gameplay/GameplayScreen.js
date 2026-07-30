@@ -393,23 +393,21 @@ export default function GameplayScreen() {
             <View style={{ width: 44 }} />
           </View>
 
-          {zoomTell && (
-            <View style={styles.modalImageArea}>
-              <Image
-                source={{ uri: task?.ai_image_url }}
-                style={[styles.modalImage, {
-                  transform: [
-                    { translateX: -(zoomTell.x - 0.5) * SW * MODAL_ZOOM },
-                    { translateY: -(zoomTell.y - 0.5) * MODAL_IMG_H * MODAL_ZOOM },
-                    { scale: MODAL_ZOOM },
-                  ],
-                }]}
-                resizeMode="cover"
-              />
-            </View>
-          )}
+          <View style={styles.modalImageArea}>
+            <Image
+              source={{ uri: task?.ai_image_url }}
+              style={[styles.modalImage, {
+                transform: [
+                  { translateX: -((zoomTell?.x ?? 0.5) - 0.5) * SW * MODAL_ZOOM },
+                  { translateY: -((zoomTell?.y ?? 0.5) - 0.5) * MODAL_IMG_H * MODAL_ZOOM },
+                  { scale: MODAL_ZOOM },
+                ],
+              }]}
+              resizeMode="cover"
+            />
+          </View>
 
-          <View style={[styles.modalFooter, { paddingBottom: insets.bottom + 16 }]}>
+          <View style={[styles.modalFooter, { paddingBottom: insets.bottom + 72 }]}>
             <Text style={styles.modalDescription}>{zoomTell?.description}</Text>
             <TouchableOpacity style={styles.modalDoneBtn} onPress={() => { light(); setZoomTell(null); }}>
               <Text style={styles.modalDoneText}>Done</Text>
@@ -430,7 +428,7 @@ const styles = StyleSheet.create({
 
   // ── Playing layer ─────────────────────────────────────────────
   playingBody:   { flex: 1, justifyContent: 'center', gap: 28 },
-  prompt:        { fontSize: 20, fontFamily: fonts.semiBold, color: colors.textPrimary, textAlign: 'center', paddingHorizontal: 16 },
+  prompt:        { fontSize: 23, fontFamily: fonts.semiBold, color: colors.textPrimary, textAlign: 'center', paddingHorizontal: 16 },
   errorText:     { color: colors.incorrect, fontSize: 16, fontFamily: fonts.medium, textAlign: 'center', paddingHorizontal: 16 },
 
   // ── Results layer ─────────────────────────────────────────────
@@ -478,7 +476,7 @@ const styles = StyleSheet.create({
   tellCard:        { backgroundColor: colors.surface, borderRadius: radius.md, padding: 16 },
   tellCardHeader:  { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
   tellBadge:       { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  tellBadgeNum:    { fontSize: 11, fontFamily: fonts.bold, color: colors.textSecondary },
+  tellBadgeNum:    { fontSize: 11, fontFamily: fonts.bold, color: colors.textPrimary },
   tellLabel:       { fontSize: 16, fontFamily: fonts.bold, color: colors.textPrimary, flex: 1 },
   tellDescription: { fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 21 },
 
@@ -493,7 +491,7 @@ const styles = StyleSheet.create({
   modalImageArea:   { width: SW, height: MODAL_IMG_H, overflow: 'hidden', alignSelf: 'center' },
   modalImage:       { width: SW, height: MODAL_IMG_H },
   modalFooter:      { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32, gap: 20 },
-  modalDescription: { fontSize: 15, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 23, textAlign: 'center' },
+  modalDescription: { fontSize: 17, fontFamily: fonts.regular, color: colors.textPrimary, lineHeight: 25, textAlign: 'center' },
   modalDoneBtn:     { backgroundColor: colors.surface, paddingVertical: 14, paddingHorizontal: 40, borderRadius: radius.pill },
   modalDoneText:    { fontSize: 15, fontFamily: fonts.semiBold, color: colors.textPrimary },
 });
