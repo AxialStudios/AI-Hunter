@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   // Illustration + question live outside the ScrollView so their
   // vertical position is fixed relative to the screen, not the scroll content.
   topSection:         { paddingHorizontal: 20 },
-  illustrationEmoji:  { fontSize: 72, textAlign: 'center', marginBottom: 28 },
+  illustrationEmoji:  { fontSize: 72, textAlign: 'center', marginBottom: 16 },
   question:           { fontSize: 30, fontFamily: fonts.bold, color: colors.textPrimary, lineHeight: 38, textAlign: 'center', marginBottom: 28 },
 
   pillsContent:       { paddingHorizontal: 20, paddingBottom: 24 },
