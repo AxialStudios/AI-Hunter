@@ -228,7 +228,7 @@ export default function ResultsScreen({ route, navigation }) {
             style={styles.nextBtn}
             onPress={() => { light(); navigation.navigate('Gameplay'); }}
           >
-            <Text style={styles.nextBtnText}>Next Card  →</Text>
+            <Text style={styles.nextBtnText}>Next Pair  →</Text>
           </TouchableOpacity>
 
         </ScrollView>

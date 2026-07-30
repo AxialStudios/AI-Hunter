@@ -310,7 +310,7 @@ export default function GameplayScreen() {
               </View>
             )}
 
-            {/* Tells + next card */}
+            {/* Tells + next pair */}
             {result && (
               <View style={styles.bottomContent}>
                 {/* Side-by-side action row */}
@@ -319,7 +319,7 @@ export default function GameplayScreen() {
                     <Text style={styles.tellsBtnText}>{showTells ? '▲  Hide tells' : '▼  See the tells'}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.nextBtn} onPress={handleNextCard}>
-                    <Text style={styles.nextBtnText}>Next Card  →</Text>
+                    <Text style={styles.nextBtnText}>Next Pair  →</Text>
                   </TouchableOpacity>
                 </View>
 
