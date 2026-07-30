@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
   verdict:          { fontSize: 44, fontFamily: fonts.bold, textAlign: 'center' },
   verdictCorrect:   { color: colors.correct },
   verdictIncorrect: { color: colors.incorrect },
-  subtitle:         { fontSize: 15, fontFamily: fonts.medium, color: colors.textSecondary, textAlign: 'center', marginTop: -8 },
+  subtitle:         { fontSize: 15, fontFamily: fonts.medium, color: colors.textPrimary, textAlign: 'center', marginTop: -8 },
 
   pctRow:      { flexDirection: 'row', width: '100%', gap: 10 },
   pctSide:     { flex: 1, alignItems: 'center', gap: 2 },
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   image:        { width: '100%', height: '100%' },
   fill:         { position: 'absolute', bottom: 0, left: 0, right: 0 },
 
-  totalVotes: { fontSize: 12, fontFamily: fonts.regular, color: colors.textTertiary, marginTop: -4 },
+  totalVotes: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, marginTop: -4 },
 
   tellsBtn:     { paddingVertical: 12, paddingHorizontal: 28, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.pill },
   tellsBtnText: { fontSize: 14, fontFamily: fonts.semiBold, color: colors.textSecondary },
@@ -181,10 +181,10 @@ const styles = StyleSheet.create({
   tellsSection:    { width: '100%', gap: 12 },
   tellsHeading:    { fontSize: 20, fontFamily: fonts.bold, color: colors.textPrimary, textAlign: 'center' },
   aiImage:         { width: '100%', aspectRatio: 0.9, borderRadius: radius.lg },
-  tellsSubheading: { fontSize: 11, fontFamily: fonts.semiBold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: 1.2 },
-  tellCard:        { backgroundColor: colors.surface, borderRadius: radius.md, padding: 14, gap: 4 },
-  tellLabel:       { fontSize: 14, fontFamily: fonts.semiBold, color: colors.textPrimary },
-  tellDescription: { fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 20 },
+  tellsSubheading: { fontSize: 13, fontFamily: fonts.bold, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 1.5 },
+  tellCard:        { backgroundColor: colors.surface, borderRadius: radius.md, padding: 16, gap: 6 },
+  tellLabel:       { fontSize: 16, fontFamily: fonts.bold, color: colors.textPrimary },
+  tellDescription: { fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 21 },
 
   nextBtn:     { backgroundColor: colors.textPrimary, paddingVertical: 18, paddingHorizontal: 48, borderRadius: radius.pill },
   nextBtnText: { color: colors.bg, fontSize: 17, fontFamily: fonts.bold },
