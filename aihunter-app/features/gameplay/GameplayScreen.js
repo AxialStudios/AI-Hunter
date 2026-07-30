@@ -287,7 +287,10 @@ export default function GameplayScreen() {
               </View>
             </View>
 
-            {/* Pct badges */}
+            {/* Total votes label + pct badges */}
+            {result && (
+              <Text style={styles.totalVotes}>{result.total_votes.toLocaleString()} total votes</Text>
+            )}
             {result && (
               <View style={styles.pctRow}>
                 <View style={styles.pctSide}>
@@ -307,11 +310,9 @@ export default function GameplayScreen() {
               </View>
             )}
 
-            {/* Total votes, tells, next card */}
+            {/* Tells + next card */}
             {result && (
               <View style={styles.bottomContent}>
-                <Text style={styles.totalVotes}>{result.total_votes.toLocaleString()} total votes</Text>
-
                 {/* Side-by-side action row */}
                 <View style={styles.actionRow}>
                   <TouchableOpacity style={styles.tellsBtn} onPress={() => { light(); setShowTells(v => !v); }}>
