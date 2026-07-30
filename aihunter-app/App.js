@@ -41,7 +41,7 @@ function AppNavigator() {
     <NavigationContainer theme={NavTheme}>
       <Stack.Navigator
         initialRouteName="Onboarding"
-        screenOptions={{ headerShown: false }}
+        screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0F0F0F' } }}
       >
         <Stack.Screen name="Onboarding" component={OnboardingScreen} />
         <Stack.Screen name="Gameplay" component={GameplayScreen} />
