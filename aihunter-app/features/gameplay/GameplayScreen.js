@@ -49,8 +49,12 @@ export default function GameplayScreen() {
   const playingOpacity = useRef(new Animated.Value(1)).current;
   const resultsOpacity = useRef(new Animated.Value(0)).current;
   const fadeAnim       = useRef(new Animated.Value(0)).current;
+  // Fill scale: 0 = no fill, 1 = full card. Uses scaleY + translateY so useNativeDriver:true
+  // works (height animation requires JS thread and causes sync flicker with native opacity).
   const leftFillAnim   = useRef(new Animated.Value(0)).current;
   const rightFillAnim  = useRef(new Animated.Value(0)).current;
+  const leftFillTranslateY  = useRef(leftFillAnim.interpolate({ inputRange: [0, 1], outputRange: [CARD_H / 2, 0] })).current;
+  const rightFillTranslateY = useRef(rightFillAnim.interpolate({ inputRange: [0, 1], outputRange: [CARD_H / 2, 0] })).current;
   const shimmerAnims   = useRef(Array.from({ length: 5 }, () => new Animated.Value(0))).current;
 
   useFocusEffect(useCallback(() => { fetchTask(); }, []));
@@ -150,15 +154,20 @@ export default function GameplayScreen() {
     setPhase('results');
     prefetchNextTask(supabase);
 
-    Animated.timing(playingOpacity, { toValue: 0, duration: 150, useNativeDriver: true }).start();
-    Animated.timing(resultsOpacity, { toValue: 1, duration: 150, useNativeDriver: true }).start();
-
+    // Delay the native opacity swap by one JS tick so React has time to commit
+    // the result state and lay out the results layer correctly before it becomes
+    // visible. Without this, resultsOpacity.setValue(1) fires before result is
+    // committed — results shows with no content, then jumps when React renders.
     setTimeout(() => {
+      playingOpacity.setValue(0);
+      resultsOpacity.setValue(1);
+
+      // Fills paint onto the results cards. Native driver — no JS/native sync conflict.
       Animated.parallel([
-        Animated.timing(leftFillAnim,  { toValue: CARD_H * leftPct  / 100, duration: 700, useNativeDriver: false }),
-        Animated.timing(rightFillAnim, { toValue: CARD_H * rightPct / 100, duration: 700, useNativeDriver: false }),
+        Animated.timing(leftFillAnim,  { toValue: leftPct  / 100, duration: 600, useNativeDriver: true }),
+        Animated.timing(rightFillAnim, { toValue: rightPct / 100, duration: 600, useNativeDriver: true }),
       ]).start();
-    }, 200);
+    }, 50);
   }
 
   function handleNextCard() {
@@ -329,7 +338,7 @@ export default function GameplayScreen() {
               <View style={styles.imageCardCol}>
                 <View style={[styles.imageWrapper, tappedSide === 'left' && { borderColor: result?.was_correct ? colors.correct : colors.incorrect }]}>
                   {task && <Image source={{ uri: leftUrl }} style={styles.image} resizeMode="cover" />}
-                  <Animated.View style={[styles.fill, { height: leftFillAnim, backgroundColor: leftFillColor }]} />
+                  <Animated.View style={[StyleSheet.absoluteFillObject, { backgroundColor: leftFillColor, transform: [{ translateY: leftFillTranslateY }, { scaleY: leftFillAnim }] }]} />
                 </View>
                 {result && (
                   <View style={styles.cardLabel}>
@@ -345,7 +354,7 @@ export default function GameplayScreen() {
               <View style={styles.imageCardCol}>
                 <View style={[styles.imageWrapper, tappedSide === 'right' && { borderColor: result?.was_correct ? colors.correct : colors.incorrect }]}>
                   {task && <Image source={{ uri: rightUrl }} style={styles.image} resizeMode="cover" />}
-                  <Animated.View style={[styles.fill, { height: rightFillAnim, backgroundColor: rightFillColor }]} />
+                  <Animated.View style={[StyleSheet.absoluteFillObject, { backgroundColor: rightFillColor, transform: [{ translateY: rightFillTranslateY }, { scaleY: rightFillAnim }] }]} />
                 </View>
                 {result && (
                   <View style={styles.cardLabel}>
