@@ -207,9 +207,10 @@ export default function GameplayScreen() {
           style={[StyleSheet.absoluteFill, { opacity: playingOpacity }]}
           pointerEvents={phase === 'playing' ? 'box-none' : 'none'}
         >
-          <View style={[styles.layer, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-            {/* Prompt + images centered */}
-            <View style={styles.playingBody}>
+          <View style={[styles.layer, { paddingTop: insets.top + 16, paddingBottom: insets.bottom }]}>
+            {/* Top section: fixed height matching results verdict block + gap
+                so the imageRow sits at the same Y in both playing and results */}
+            <View style={styles.playingTop}>
               {phase === 'loading' && !task ? (
                 <ActivityIndicator color={colors.textPrimary} />
               ) : loadError ? (
@@ -219,75 +220,79 @@ export default function GameplayScreen() {
                   {selectedSide ? 'Is this the real one?' : 'Tap the real image'}
                 </Text>
               )}
-              <View style={styles.imageRow}>
-                {/* Left image */}
-                <View style={[styles.imageWrapper, selectedSide === 'left' && styles.imageWrapperChosen]}>
-                  <TouchableOpacity
-                    style={StyleSheet.absoluteFillObject}
-                    onPress={() => handleSelect('left')}
-                    disabled={voting}
-                    activeOpacity={0.88}
-                  >
-                    {task && (
-                      <Animated.Image
-                        key={cardKey.current + '-left'}
-                        source={{ uri: leftUrl }}
-                        style={[styles.image, { opacity: fadeAnim }]}
-                        resizeMode="cover"
-                        onLoadEnd={handleImageLoad}
-                      />
-                    )}
-                  </TouchableOpacity>
-                  {selectedSide === 'left' && (
-                    <TouchableOpacity
-                      style={styles.zoomIconBtn}
-                      onPress={() => { light(); setInspectSide('left'); }}
-                    >
-                      <Feather name="maximize-2" size={13} color="#fff" />
-                    </TouchableOpacity>
-                  )}
-                </View>
+            </View>
 
-                {/* Right image */}
-                <View style={[styles.imageWrapper, selectedSide === 'right' && styles.imageWrapperChosen]}>
-                  <TouchableOpacity
-                    style={StyleSheet.absoluteFillObject}
-                    onPress={() => handleSelect('right')}
-                    disabled={voting}
-                    activeOpacity={0.88}
-                  >
-                    {task && (
-                      <Animated.Image
-                        key={cardKey.current + '-right'}
-                        source={{ uri: rightUrl }}
-                        style={[styles.image, { opacity: fadeAnim }]}
-                        resizeMode="cover"
-                        onLoadEnd={handleImageLoad}
-                      />
-                    )}
-                  </TouchableOpacity>
-                  {selectedSide === 'right' && (
-                    <TouchableOpacity
-                      style={styles.zoomIconBtn}
-                      onPress={() => { light(); setInspectSide('right'); }}
-                    >
-                      <Feather name="maximize-2" size={13} color="#fff" />
-                    </TouchableOpacity>
+            {/* Image row — same position as results layer */}
+            <View style={styles.imageRow}>
+              {/* Left image */}
+              <View style={[styles.imageWrapper, selectedSide === 'left' && styles.imageWrapperChosen]}>
+                <TouchableOpacity
+                  style={StyleSheet.absoluteFillObject}
+                  onPress={() => handleSelect('left')}
+                  disabled={voting}
+                  activeOpacity={0.88}
+                >
+                  {task && (
+                    <Animated.Image
+                      key={cardKey.current + '-left'}
+                      source={{ uri: leftUrl }}
+                      style={[styles.image, { opacity: fadeAnim }]}
+                      resizeMode="cover"
+                      onLoadEnd={handleImageLoad}
+                    />
                   )}
-                </View>
+                </TouchableOpacity>
+                {selectedSide === 'left' && (
+                  <TouchableOpacity
+                    style={styles.zoomIconBtn}
+                    onPress={() => { light(); setInspectSide('left'); }}
+                  >
+                    <Feather name="maximize-2" size={13} color="#fff" />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Right image */}
+              <View style={[styles.imageWrapper, selectedSide === 'right' && styles.imageWrapperChosen]}>
+                <TouchableOpacity
+                  style={StyleSheet.absoluteFillObject}
+                  onPress={() => handleSelect('right')}
+                  disabled={voting}
+                  activeOpacity={0.88}
+                >
+                  {task && (
+                    <Animated.Image
+                      key={cardKey.current + '-right'}
+                      source={{ uri: rightUrl }}
+                      style={[styles.image, { opacity: fadeAnim }]}
+                      resizeMode="cover"
+                      onLoadEnd={handleImageLoad}
+                    />
+                  )}
+                </TouchableOpacity>
+                {selectedSide === 'right' && (
+                  <TouchableOpacity
+                    style={styles.zoomIconBtn}
+                    onPress={() => { light(); setInspectSide('right'); }}
+                  >
+                    <Feather name="maximize-2" size={13} color="#fff" />
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
 
-            {/* Confirm button — always rendered to hold space; invisible until selection */}
-            <View style={styles.confirmContainer}>
-              <TouchableOpacity
-                style={[styles.confirmBtn, (!selectedSide || phase !== 'playing') && { opacity: 0 }]}
-                onPress={handleConfirm}
-                activeOpacity={0.85}
-                disabled={!selectedSide || phase !== 'playing'}
-              >
-                <Text style={styles.confirmBtnText}>Confirm  →</Text>
-              </TouchableOpacity>
+            {/* Bottom section: flex fills rest, confirm button at bottom */}
+            <View style={styles.playingBottom}>
+              <View style={styles.confirmContainer}>
+                <TouchableOpacity
+                  style={[styles.confirmBtn, (!selectedSide || phase !== 'playing') && { opacity: 0 }]}
+                  onPress={handleConfirm}
+                  activeOpacity={0.85}
+                  disabled={!selectedSide || phase !== 'playing'}
+                >
+                  <Text style={styles.confirmBtnText}>Confirm  →</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </Animated.View>
@@ -509,7 +514,8 @@ const styles = StyleSheet.create({
   resultsLayer: { backgroundColor: colors.bg },
 
   // ── Playing layer ─────────────────────────────────────────────
-  playingBody:   { flex: 1, justifyContent: 'center', gap: 28 },
+  playingTop:    { height: 170, justifyContent: 'flex-end', paddingBottom: 14 },
+  playingBottom: { flex: 1, justifyContent: 'flex-end' },
   prompt:        { fontSize: 23, fontFamily: fonts.semiBold, color: colors.textPrimary, textAlign: 'center', paddingHorizontal: 16 },
   errorText:     { color: colors.incorrect, fontSize: 16, fontFamily: fonts.medium, textAlign: 'center', paddingHorizontal: 16 },
 
@@ -526,7 +532,7 @@ const styles = StyleSheet.create({
 
   // ── Image row (same structure both layers) ────────────────────
   imageRow:             { flexDirection: 'row', gap: 10, paddingHorizontal: 16 },
-  imageWrapper:         { width: CARD_W, height: CARD_H, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.surface, borderWidth: 3, borderColor: 'transparent' },
+  imageWrapper:         { width: CARD_W, height: CARD_H, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.surface, borderWidth: 3, borderColor: colors.border },
   imageWrapperSelected: { borderColor: colors.textPrimary },
   imageWrapperChosen:   { borderColor: colors.textPrimary },
   image:                { width: '100%', height: '100%' },
