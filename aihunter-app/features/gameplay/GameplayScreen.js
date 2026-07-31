@@ -319,44 +319,43 @@ export default function GameplayScreen() {
               </View>
             )}
 
-            {/* Images + fill bars */}
+            {/* Images + fill bars + per-card labels */}
             <View style={styles.imageRow}>
-              <View style={[styles.imageWrapper, tappedSide === 'left' && styles.imageWrapperSelected]}>
-                {task && (
-                  <Image source={{ uri: leftUrl }} style={styles.image} resizeMode="cover" />
+              <View style={styles.imageCardCol}>
+                <View style={[styles.imageWrapper, tappedSide === 'left' && styles.imageWrapperSelected]}>
+                  {task && <Image source={{ uri: leftUrl }} style={styles.image} resizeMode="cover" />}
+                  <Animated.View style={[styles.fill, { height: leftFillAnim, backgroundColor: leftFillColor }]} />
+                </View>
+                {result && (
+                  <View style={styles.cardLabel}>
+                    <View style={[styles.cardBadge, { backgroundColor: leftColor }]}>
+                      <Feather name={leftIsReal ? 'check' : 'x'} size={13} color="#FFF" />
+                    </View>
+                    <Text style={[styles.cardPct, { color: leftColor }]}>{leftPct}%</Text>
+                    <Text style={styles.cardTag}>{leftIsReal ? 'REAL' : 'AI'}</Text>
+                  </View>
                 )}
-                <Animated.View style={[styles.fill, { height: leftFillAnim, backgroundColor: leftFillColor }]} />
               </View>
 
-              <View style={[styles.imageWrapper, tappedSide === 'right' && styles.imageWrapperSelected]}>
-                {task && (
-                  <Image source={{ uri: rightUrl }} style={styles.image} resizeMode="cover" />
+              <View style={styles.imageCardCol}>
+                <View style={[styles.imageWrapper, tappedSide === 'right' && styles.imageWrapperSelected]}>
+                  {task && <Image source={{ uri: rightUrl }} style={styles.image} resizeMode="cover" />}
+                  <Animated.View style={[styles.fill, { height: rightFillAnim, backgroundColor: rightFillColor }]} />
+                </View>
+                {result && (
+                  <View style={styles.cardLabel}>
+                    <View style={[styles.cardBadge, { backgroundColor: rightColor }]}>
+                      <Feather name={!leftIsReal ? 'check' : 'x'} size={13} color="#FFF" />
+                    </View>
+                    <Text style={[styles.cardPct, { color: rightColor }]}>{rightPct}%</Text>
+                    <Text style={styles.cardTag}>{!leftIsReal ? 'REAL' : 'AI'}</Text>
+                  </View>
                 )}
-                <Animated.View style={[styles.fill, { height: rightFillAnim, backgroundColor: rightFillColor }]} />
               </View>
             </View>
 
-            {/* Total votes label + pct badges */}
             {result && (
               <Text style={styles.totalVotes}>{result.total_votes.toLocaleString()} total votes</Text>
-            )}
-            {result && (
-              <View style={styles.pctRow}>
-                <View style={styles.pctSide}>
-                  <View style={[styles.symbolBadge, { backgroundColor: leftColor }]}>
-                    <Feather name={leftIsReal ? 'check' : 'x'} size={16} color="#FFF" />
-                  </View>
-                  <Text style={[styles.pctNumber, { color: leftColor }]}>{leftPct}%</Text>
-                  <Text style={styles.pctTag}>{leftIsReal ? 'REAL' : 'AI'}</Text>
-                </View>
-                <View style={styles.pctSide}>
-                  <View style={[styles.symbolBadge, { backgroundColor: rightColor }]}>
-                    <Feather name={!leftIsReal ? 'check' : 'x'} size={16} color="#FFF" />
-                  </View>
-                  <Text style={[styles.pctNumber, { color: rightColor }]}>{rightPct}%</Text>
-                  <Text style={styles.pctTag}>{!leftIsReal ? 'REAL' : 'AI'}</Text>
-                </View>
-              </View>
             )}
 
             {/* Tells + next pair */}
@@ -538,12 +537,12 @@ const styles = StyleSheet.create({
   confirmBtnText:       { color: colors.bg, fontSize: 17, fontFamily: fonts.bold },
   inspectFooter:        { alignItems: 'center', paddingTop: 16 },
 
-  // ── Pct badges ────────────────────────────────────────────────
-  pctRow:      { flexDirection: 'row', paddingHorizontal: 16, marginTop: -5 },
-  pctSide:     { flex: 1, alignItems: 'center', gap: 2 },
-  symbolBadge: { width: 30, height: 30, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
-  pctNumber:   { fontSize: 20, fontFamily: fonts.bold, marginTop: 2 },
-  pctTag:      { fontSize: 11, fontFamily: fonts.semiBold, color: colors.textPrimary, letterSpacing: 1.5 },
+  // ── Per-card labels (anchored below each image) ───────────────
+  imageCardCol: { alignItems: 'center', gap: 10 },
+  cardLabel:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
+  cardBadge:    { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  cardPct:      { fontSize: 20, fontFamily: fonts.bold },
+  cardTag:      { fontSize: 14, fontFamily: fonts.semiBold, color: colors.textPrimary, letterSpacing: 1.5 },
 
   // ── Bottom content (inside results ScrollView) ────────────────
   totalVotes:    { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center' },
