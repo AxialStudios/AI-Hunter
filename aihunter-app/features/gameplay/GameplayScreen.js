@@ -491,6 +491,7 @@ export default function GameplayScreen() {
             <View style={{ width: 44 }} />
           </View>
           <ScrollView
+            key={inspectSide === side ? 'open' : 'closed'}
             style={{ flex: 1 }}
             minimumZoomScale={1}
             maximumZoomScale={4}
