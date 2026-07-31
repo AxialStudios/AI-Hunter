@@ -476,13 +476,13 @@ export default function GameplayScreen() {
         </View>
       </View>
 
-      {/* ── INSPECT OVERLAYS ─ one per side, both always pre-loaded ── */}
-      {(['left', 'right']).map(side => (
-        <View
-          key={side}
-          style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.bg, opacity: inspectSide === side ? 1 : 0.001 }]}
-          pointerEvents={inspectSide === side ? 'auto' : 'none'}
-        >
+      {/* Pre-load inspect images into RN's cache so the overlay opens flash-free */}
+      {leftUrl  && <Image source={{ uri: leftUrl  }} style={styles.preload} />}
+      {rightUrl && <Image source={{ uri: rightUrl }} style={styles.preload} />}
+
+      {/* ── INSPECT OVERLAY ─ unmounted when closed so scroll/zoom always resets ── */}
+      {inspectSide && (
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.bg }]} pointerEvents="auto">
           <View style={[styles.modalHeader, { paddingTop: insets.top + 8 }]}>
             <TouchableOpacity onPress={() => setInspectSide(null)} style={styles.modalCloseBtn}>
               <Feather name="x" size={22} color={colors.textPrimary} />
@@ -491,7 +491,6 @@ export default function GameplayScreen() {
             <View style={{ width: 44 }} />
           </View>
           <ScrollView
-            key={inspectSide === side ? 'open' : 'closed'}
             style={{ flex: 1 }}
             minimumZoomScale={1}
             maximumZoomScale={4}
@@ -501,7 +500,7 @@ export default function GameplayScreen() {
             showsVerticalScrollIndicator={false}
           >
             <Image
-              source={{ uri: side === 'left' ? leftUrl : rightUrl }}
+              source={{ uri: inspectSide === 'left' ? leftUrl : rightUrl }}
               style={{ width: SW, height: SH - insets.top - 56 - insets.bottom - 72 }}
               resizeMode="contain"
             />
@@ -512,7 +511,7 @@ export default function GameplayScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      ))}
+      )}
 
     </View>
   );
@@ -590,6 +589,8 @@ const styles = StyleSheet.create({
 
   nextBtn:     { flex: 1, backgroundColor: colors.textPrimary, paddingVertical: 18, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   nextBtnText: { color: colors.bg, fontSize: 17, fontFamily: fonts.bold },
+
+  preload: { position: 'absolute', width: 0, height: 0, opacity: 0 },
 
   // ── Zoom modal ────────────────────────────────────────────────
   modalContainer:   { flex: 1, backgroundColor: '#000' },
