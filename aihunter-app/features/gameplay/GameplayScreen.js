@@ -12,7 +12,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useHaptics } from '../../context/HapticsContext';
 import { colors, fonts, radius } from '../../constants/theme';
 
-const { width: SW } = Dimensions.get('window');
+const { width: SW, height: SH } = Dimensions.get('window');
 const CARD_W = Math.floor((SW - 32 - 10) / 2);
 const CARD_H = Math.floor(CARD_W / 0.5);
 
@@ -37,8 +37,11 @@ export default function GameplayScreen() {
   const startTime                   = useRef(Date.now());
 
   const [showTells, setShowTells] = useState(false);
-  const [zoomTell,  setZoomTell]  = useState(null);
-  const zoomTellRef = useRef(null); // locked coords — never null while modal is visible
+  const [zoomTell,    setZoomTell]    = useState(null);
+  const zoomTellRef   = useRef(null);
+  const [selectedSide, setSelectedSide] = useState(null); // 'left' | 'right' — pre-confirm pick
+  const [inspectSide,  setInspectSide]  = useState(null); // 'left' | 'right' — full-screen zoom
+  const inspectRef    = useRef(null);
   const [aiLayout,  setAiLayout]  = useState({ width: 0, height: 0 });
 
   // Increment on every fetchTask so images always remount even if task.id repeats
@@ -59,6 +62,8 @@ export default function GameplayScreen() {
     setResult(null);
     setVoting(false);
     setTappedSide(null);
+    setSelectedSide(null);
+    setInspectSide(null);
     setShowTells(false);
 
     cardKey.current += 1;
@@ -110,10 +115,17 @@ export default function GameplayScreen() {
     }
   }
 
-  async function handleTap(tappedLeft) {
+  function handleSelect(side) {
     if (voting || phase !== 'playing') return;
+    light();
+    setSelectedSide(side);
+  }
+
+  async function handleConfirm() {
+    if (!selectedSide || voting || phase !== 'playing') return;
     medium();
-    setTappedSide(tappedLeft ? 'left' : 'right');
+    const tappedLeft = selectedSide === 'left';
+    setTappedSide(selectedSide);
     setVoting(true);
 
     const tappedReal       = tappedLeft === leftIsReal;
@@ -125,7 +137,7 @@ export default function GameplayScreen() {
       p_chose_ai: chose_ai, p_response_time_ms: response_time_ms,
     });
 
-    if (voteErr) { console.error('Vote error:', voteErr.message); setVoting(false); setTappedSide(null); return; }
+    if (voteErr) { console.error('Vote error:', voteErr.message); setVoting(false); setTappedSide(null); setSelectedSide(null); return; }
 
     data.was_correct ? success() : hapticError();
     setResult(data);
@@ -154,6 +166,8 @@ export default function GameplayScreen() {
     light();
     setShowTells(false);
     setZoomTell(null);
+    setSelectedSide(null);
+    setInspectSide(null);
     // Only fade out the results layer; playing layer is already at 0
     Animated.timing(resultsOpacity, { toValue: 0, duration: 150, useNativeDriver: true })
       .start(() => fetchTask());
@@ -195,51 +209,84 @@ export default function GameplayScreen() {
           pointerEvents={phase === 'playing' ? 'box-none' : 'none'}
         >
           <View style={[styles.layer, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-            {/* Prompt + images centered together as one unit */}
+            {/* Prompt + images centered */}
             <View style={styles.playingBody}>
               {phase === 'loading' && !task ? (
                 <ActivityIndicator color={colors.textPrimary} />
               ) : loadError ? (
                 <Text style={styles.errorText}>{loadError}</Text>
               ) : (
-                <Text style={styles.prompt}>Tap the real image</Text>
+                <Text style={styles.prompt}>
+                  {selectedSide ? 'Is this the real one?' : 'Tap the real image'}
+                </Text>
               )}
               <View style={styles.imageRow}>
-                <TouchableOpacity
-                  style={styles.imageWrapper}
-                  onPress={() => handleTap(true)}
-                  disabled={voting}
-                  activeOpacity={0.9}
-                >
-                  {task && (
-                    <Animated.Image
-                      key={cardKey.current + '-left'}
-                      source={{ uri: leftUrl }}
-                      style={[styles.image, { opacity: fadeAnim }]}
-                      resizeMode="cover"
-                      onLoadEnd={handleImageLoad}
-                    />
+                {/* Left image */}
+                <View style={[styles.imageWrapper, selectedSide === 'left' && styles.imageWrapperChosen]}>
+                  <TouchableOpacity
+                    style={StyleSheet.absoluteFillObject}
+                    onPress={() => handleSelect('left')}
+                    disabled={voting}
+                    activeOpacity={0.88}
+                  >
+                    {task && (
+                      <Animated.Image
+                        key={cardKey.current + '-left'}
+                        source={{ uri: leftUrl }}
+                        style={[styles.image, { opacity: fadeAnim }]}
+                        resizeMode="cover"
+                        onLoadEnd={handleImageLoad}
+                      />
+                    )}
+                  </TouchableOpacity>
+                  {selectedSide === 'left' && (
+                    <TouchableOpacity
+                      style={styles.zoomIconBtn}
+                      onPress={() => { light(); inspectRef.current = 'left'; setInspectSide('left'); }}
+                    >
+                      <Feather name="maximize-2" size={13} color="#fff" />
+                    </TouchableOpacity>
                   )}
-                </TouchableOpacity>
+                </View>
 
-                <TouchableOpacity
-                  style={styles.imageWrapper}
-                  onPress={() => handleTap(false)}
-                  disabled={voting}
-                  activeOpacity={0.9}
-                >
-                  {task && (
-                    <Animated.Image
-                      key={cardKey.current + '-right'}
-                      source={{ uri: rightUrl }}
-                      style={[styles.image, { opacity: fadeAnim }]}
-                      resizeMode="cover"
-                      onLoadEnd={handleImageLoad}
-                    />
+                {/* Right image */}
+                <View style={[styles.imageWrapper, selectedSide === 'right' && styles.imageWrapperChosen]}>
+                  <TouchableOpacity
+                    style={StyleSheet.absoluteFillObject}
+                    onPress={() => handleSelect('right')}
+                    disabled={voting}
+                    activeOpacity={0.88}
+                  >
+                    {task && (
+                      <Animated.Image
+                        key={cardKey.current + '-right'}
+                        source={{ uri: rightUrl }}
+                        style={[styles.image, { opacity: fadeAnim }]}
+                        resizeMode="cover"
+                        onLoadEnd={handleImageLoad}
+                      />
+                    )}
+                  </TouchableOpacity>
+                  {selectedSide === 'right' && (
+                    <TouchableOpacity
+                      style={styles.zoomIconBtn}
+                      onPress={() => { light(); inspectRef.current = 'right'; setInspectSide('right'); }}
+                    >
+                      <Feather name="maximize-2" size={13} color="#fff" />
+                    </TouchableOpacity>
                   )}
-                </TouchableOpacity>
+                </View>
               </View>
             </View>
+
+            {/* Confirm button — pinned at bottom, appears after selection */}
+            {selectedSide && (
+              <View style={styles.confirmContainer}>
+                <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirm} activeOpacity={0.85}>
+                  <Text style={styles.confirmBtnText}>Confirm  →</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </Animated.View>
 
@@ -411,6 +458,40 @@ export default function GameplayScreen() {
         </View>
       </View>
 
+      {/* ── INSPECT OVERLAY ─ full-screen pinch-to-zoom image view ── */}
+      <View
+        style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.bg, opacity: inspectSide ? 1 : 0.001 }]}
+        pointerEvents={inspectSide ? 'auto' : 'none'}
+      >
+        <View style={[styles.modalHeader, { paddingTop: insets.top + 8 }]}>
+          <TouchableOpacity onPress={() => setInspectSide(null)} style={styles.modalCloseBtn}>
+            <Feather name="x" size={22} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <Text style={styles.modalTitle}>Inspect</Text>
+          <View style={{ width: 44 }} />
+        </View>
+        <ScrollView
+          style={{ flex: 1 }}
+          minimumZoomScale={1}
+          maximumZoomScale={4}
+          bouncesZoom
+          centerContent
+          showsHorizontalScrollIndicator={false}
+          showsVerticalScrollIndicator={false}
+        >
+          <Image
+            source={{ uri: inspectRef.current === 'left' ? leftUrl : rightUrl }}
+            style={{ width: SW, height: SH - insets.top - 56 - insets.bottom - 72 }}
+            resizeMode="contain"
+          />
+        </ScrollView>
+        <View style={[styles.inspectFooter, { paddingBottom: insets.bottom + 16 }]}>
+          <TouchableOpacity style={styles.modalDoneBtn} onPress={() => setInspectSide(null)}>
+            <Text style={styles.modalDoneText}>Done</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
     </View>
   );
 
@@ -443,8 +524,14 @@ const styles = StyleSheet.create({
   imageRow:             { flexDirection: 'row', gap: 10, paddingHorizontal: 16 },
   imageWrapper:         { width: CARD_W, height: CARD_H, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.surface, borderWidth: 3, borderColor: 'transparent' },
   imageWrapperSelected: { borderColor: colors.textPrimary },
+  imageWrapperChosen:   { borderColor: colors.textPrimary },
   image:                { width: '100%', height: '100%' },
   fill:                 { position: 'absolute', bottom: 0, left: 0, right: 0 },
+  zoomIconBtn:          { position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 14, padding: 6 },
+  confirmContainer:     { paddingHorizontal: 16, paddingBottom: 12 },
+  confirmBtn:           { backgroundColor: colors.textPrimary, paddingVertical: 18, borderRadius: radius.pill, alignItems: 'center' },
+  confirmBtnText:       { color: colors.bg, fontSize: 17, fontFamily: fonts.bold },
+  inspectFooter:        { alignItems: 'center', paddingTop: 16 },
 
   // ── Pct badges ────────────────────────────────────────────────
   pctRow:      { flexDirection: 'row', paddingHorizontal: 16, marginTop: -5 },
