@@ -129,18 +129,17 @@ export default function OnboardingScreen({ navigation }) {
           <Text style={styles.ageGate}>This app is for users 13 and older.</Text>
         )}
 
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      </ScrollView>
+
+      {/* Footer */}
+      <View style={styles.footer}>
         {step === STEPS.length - 1 && (
           <Text style={styles.consent}>
             By continuing you agree to our collection of anonymous gameplay data and survey
             answers to study AI image perception. No personal info is linked to your account.
           </Text>
         )}
-
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-      </ScrollView>
-
-      {/* Footer */}
-      <View style={styles.footer}>
         <TouchableOpacity
           style={[styles.btn, !canContinue && styles.btnDisabled]}
           onPress={handleContinue}
@@ -207,7 +206,7 @@ const styles = StyleSheet.create({
   consent:            { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 20, textAlign: 'center' },
   errorText:          { color: colors.incorrect, fontFamily: fonts.medium, fontSize: 13, textAlign: 'center' },
 
-  footer:             { padding: 20, paddingBottom: 16 },
+  footer:             { padding: 20, paddingBottom: 16, gap: 12 },
   btn:                { backgroundColor: colors.textPrimary, paddingVertical: 18, borderRadius: radius.pill, alignItems: 'center' },
   btnDisabled:        { backgroundColor: colors.surface2 },
   btnText:            { color: colors.bg, fontSize: 17, fontFamily: fonts.bold },

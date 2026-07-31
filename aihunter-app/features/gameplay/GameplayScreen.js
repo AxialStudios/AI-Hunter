@@ -321,17 +321,20 @@ export default function GameplayScreen() {
             ]}
             showsVerticalScrollIndicator={false}
           >
-            {/* Verdict */}
-            {result && (
-              <View style={styles.verdictBlock}>
-                <Text style={[styles.verdict, result.was_correct ? styles.verdictCorrect : styles.verdictIncorrect]}>
-                  {result.was_correct ? 'Correct!' : 'Fooled!'}
-                </Text>
-                <Text style={styles.subtitle}>
-                  {result.was_correct ? 'You spotted the real image.' : 'You picked the AI image.'}
-                </Text>
-              </View>
-            )}
+            {/* Verdict — fixed-height container matching playingTop so images
+                always sit at the exact same Y as the playing layer. */}
+            <View style={styles.resultsVerdictTop}>
+              {result && (
+                <View style={styles.verdictBlock}>
+                  <Text style={[styles.verdict, result.was_correct ? styles.verdictCorrect : styles.verdictIncorrect]}>
+                    {result.was_correct ? 'Correct!' : 'Fooled!'}
+                  </Text>
+                  <Text style={styles.subtitle}>
+                    {result.was_correct ? 'You spotted the real image.' : 'You picked the AI image.'}
+                  </Text>
+                </View>
+              )}
+            </View>
 
             {/* Images + fill bars + per-card labels */}
             <View style={styles.imageRow}>
@@ -369,12 +372,12 @@ export default function GameplayScreen() {
             </View>
 
             {result && (
-              <Text style={styles.totalVotes}>{result.total_votes.toLocaleString()} total votes</Text>
+              <Text style={[styles.totalVotes, { marginTop: 14 }]}>{result.total_votes.toLocaleString()} total votes</Text>
             )}
 
             {/* Tells + next pair */}
             {result && (
-              <View style={styles.bottomContent}>
+              <View style={[styles.bottomContent, { marginTop: 14 }]}>
                 {/* Side-by-side action row */}
                 <View style={styles.actionRow}>
                   <TouchableOpacity style={styles.tellsBtn} onPress={() => { light(); setShowTells(v => !v); }}>
@@ -523,15 +526,16 @@ const styles = StyleSheet.create({
   resultsLayer: { backgroundColor: colors.bg },
 
   // ── Playing layer ─────────────────────────────────────────────
-  playingTop:    { height: 162, justifyContent: 'flex-end', paddingBottom: 14 },
+  playingTop:    { height: 164, justifyContent: 'flex-end', paddingBottom: 14 },
   playingBottom: { flex: 1, justifyContent: 'flex-end' },
   prompt:        { fontSize: 23, fontFamily: fonts.semiBold, color: colors.textPrimary, textAlign: 'center', paddingHorizontal: 16 },
   errorText:     { color: colors.incorrect, fontSize: 16, fontFamily: fonts.medium, textAlign: 'center', paddingHorizontal: 16 },
 
   // ── Results layer ─────────────────────────────────────────────
-  // Single ScrollView wrapping all results content.
-  // flexGrow:1 + justifyContent:'center' = centered when short, scrollable when tells expand.
-  resultsScrollContent: { flexGrow: 1, justifyContent: 'center', gap: 14 },
+  // resultsVerdictTop matches playingTop exactly so imageRow lands at
+  // the same Y on both layers — no floating-point centering offset.
+  resultsScrollContent: { flexGrow: 1 },
+  resultsVerdictTop:    { height: 164, justifyContent: 'flex-end', paddingBottom: 14 },
   verdictBlock:         { alignItems: 'center' },
   verdict:              { fontSize: 54, fontFamily: fonts.bold, textAlign: 'center' },
   verdictCorrect:       { color: colors.correct },
