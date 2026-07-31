@@ -487,11 +487,31 @@ export default function GameplayScreen() {
           <Image
             source={{ uri: task?.ai_image_url }}
             style={[styles.modalImage, {
-              transform: [
-                { translateX: -((zoomTellRef.current?.x ?? 0.5) - 0.5) * SW * MODAL_ZOOM },
-                { translateY: -((zoomTellRef.current?.y ?? 0.5) - 0.5) * MODAL_IMG_H * MODAL_ZOOM },
-                { scale: MODAL_ZOOM },
-              ],
+              transform: (() => {
+                const tx = zoomTellRef.current?.x ?? 0.5;
+                const ty = zoomTellRef.current?.y ?? 0.5;
+                // Convert natural image fractions → display pixel position in
+                // the SW×MODAL_IMG_H container, then shift so that pixel lands
+                // at screen centre after the MODAL_ZOOM scale.
+                if (aiNaturalSize.width > 0) {
+                  const ms = Math.max(SW / aiNaturalSize.width, MODAL_IMG_H / aiNaturalSize.height);
+                  const ox = (aiNaturalSize.width  * ms - SW) / 2;
+                  const oy = (aiNaturalSize.height * ms - MODAL_IMG_H) / 2;
+                  const px = tx * aiNaturalSize.width  * ms - ox;
+                  const py = ty * aiNaturalSize.height * ms - oy;
+                  return [
+                    { translateX: -(px - SW / 2) * MODAL_ZOOM },
+                    { translateY: -(py - MODAL_IMG_H / 2) * MODAL_ZOOM },
+                    { scale: MODAL_ZOOM },
+                  ];
+                }
+                // Fallback before natural size loads
+                return [
+                  { translateX: -(tx - 0.5) * SW * MODAL_ZOOM },
+                  { translateY: -(ty - 0.5) * MODAL_IMG_H * MODAL_ZOOM },
+                  { scale: MODAL_ZOOM },
+                ];
+              })(),
             }]}
             resizeMode="cover"
           />
