@@ -429,7 +429,7 @@ export default function GameplayScreen() {
                         const scale   = Math.max(aiLayout.width / aiNaturalSize.width, aiLayout.height / aiNaturalSize.height);
                         const offsetX = (aiNaturalSize.width  * scale - aiLayout.width)  / 2;
                         const offsetY = (aiNaturalSize.height * scale - aiLayout.height) / 2;
-                        const r  = Math.max(26, (tell.radius ?? 0.09) * aiNaturalSize.width * scale);
+                        const r  = Math.max(26, (tell.radius ?? 0.09) * aiLayout.width);
                         const cx = tell.x * aiNaturalSize.width  * scale - offsetX;
                         const cy = tell.y * aiNaturalSize.height * scale - offsetY;
                         const opacity      = shimmerAnims[i].interpolate({ inputRange: [0, 1], outputRange: [0.3, 0.9] });
