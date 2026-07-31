@@ -43,7 +43,8 @@ export default function GameplayScreen() {
   const [inspectSide,  setInspectSide]  = useState(null); // 'left' | 'right' — full-screen zoom
   const leftScrollRef  = useRef(null);
   const rightScrollRef = useRef(null);
-  const [aiLayout,  setAiLayout]  = useState({ width: 0, height: 0 });
+  const [aiLayout,      setAiLayout]      = useState({ width: 0, height: 0 });
+  const [aiNaturalSize, setAiNaturalSize] = useState({ width: 0, height: 0 });
 
   // Increment on every fetchTask so images always remount even if task.id repeats
   const cardKey        = useRef(0);
@@ -190,6 +191,7 @@ export default function GameplayScreen() {
     setZoomTell(null);
     setSelectedSide(null);
     setInspectSide(null);
+    setAiNaturalSize({ width: 0, height: 0 });
     // Only fade out the results layer; playing layer is already at 0
     Animated.timing(resultsOpacity, { toValue: 0, duration: 150, useNativeDriver: true })
       .start(() => fetchTask());
@@ -411,14 +413,27 @@ export default function GameplayScreen() {
                     style={styles.aiImageWrapper}
                     onLayout={e => { const l = e.nativeEvent.layout; if (l.width > 0) setAiLayout(l); }}
                   >
-                    <Image source={{ uri: task?.ai_image_url }} style={styles.aiImage} resizeMode="cover" />
-                    {showTells && aiLayout.width > 0 && aiLayout.height > 0 && tells.map((tell, i) => {
+                    <Image
+                      source={{ uri: task?.ai_image_url }}
+                      style={styles.aiImage}
+                      resizeMode="cover"
+                      onLoad={e => {
+                        const { width, height } = e.nativeEvent.source;
+                        setAiNaturalSize({ width, height });
+                      }}
+                    />
+                    {showTells && aiLayout.width > 0 && aiLayout.height > 0 && aiNaturalSize.width > 0 && tells.map((tell, i) => {
                         if (tell.x == null || tell.y == null) return null;
-                        const r  = Math.max(26, (tell.radius ?? 0.09) * aiLayout.width);
-                        const cx = tell.x * aiLayout.width;
-                        const cy = tell.y * aiLayout.height;
-                        const opacity = shimmerAnims[i].interpolate({ inputRange: [0, 1], outputRange: [0.3, 0.9] });
-                        const scale   = shimmerAnims[i].interpolate({ inputRange: [0, 1], outputRange: [0.88, 1.10] });
+                        // tell.x/y are fractions of the natural image. Convert to display
+                        // coordinates by accounting for resizeMode="cover" crop/scale.
+                        const scale   = Math.max(aiLayout.width / aiNaturalSize.width, aiLayout.height / aiNaturalSize.height);
+                        const offsetX = (aiNaturalSize.width  * scale - aiLayout.width)  / 2;
+                        const offsetY = (aiNaturalSize.height * scale - aiLayout.height) / 2;
+                        const r  = Math.max(26, (tell.radius ?? 0.09) * aiNaturalSize.width * scale);
+                        const cx = tell.x * aiNaturalSize.width  * scale - offsetX;
+                        const cy = tell.y * aiNaturalSize.height * scale - offsetY;
+                        const opacity      = shimmerAnims[i].interpolate({ inputRange: [0, 1], outputRange: [0.3, 0.9] });
+                        const shimmerScale = shimmerAnims[i].interpolate({ inputRange: [0, 1], outputRange: [0.88, 1.10] });
                         return (
                           <TouchableOpacity
                             key={i}
@@ -426,7 +441,7 @@ export default function GameplayScreen() {
                             onPress={() => { light(); zoomTellRef.current = tell; setZoomTell(tell); }}
                             activeOpacity={0.75}
                           >
-                            <Animated.View style={[styles.highlightFill, { borderRadius: r, opacity, transform: [{ scale }] }]} />
+                            <Animated.View style={[styles.highlightFill, { borderRadius: r, opacity, transform: [{ scale: shimmerScale }] }]} />
                             <Animated.View style={[styles.highlightRing, { borderRadius: r, opacity }]} />
                             <Text style={styles.highlightNum}>{i + 1}</Text>
                           </TouchableOpacity>
