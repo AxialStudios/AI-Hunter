@@ -322,7 +322,7 @@ export default function GameplayScreen() {
             {/* Images + fill bars + per-card labels */}
             <View style={styles.imageRow}>
               <View style={styles.imageCardCol}>
-                <View style={[styles.imageWrapper, tappedSide === 'left' && styles.imageWrapperSelected]}>
+                <View style={[styles.imageWrapper, tappedSide === 'left' && { borderColor: result?.was_correct ? colors.correct : colors.incorrect }]}>
                   {task && <Image source={{ uri: leftUrl }} style={styles.image} resizeMode="cover" />}
                   <Animated.View style={[styles.fill, { height: leftFillAnim, backgroundColor: leftFillColor }]} />
                 </View>
@@ -338,7 +338,7 @@ export default function GameplayScreen() {
               </View>
 
               <View style={styles.imageCardCol}>
-                <View style={[styles.imageWrapper, tappedSide === 'right' && styles.imageWrapperSelected]}>
+                <View style={[styles.imageWrapper, tappedSide === 'right' && { borderColor: result?.was_correct ? colors.correct : colors.incorrect }]}>
                   {task && <Image source={{ uri: rightUrl }} style={styles.image} resizeMode="cover" />}
                   <Animated.View style={[styles.fill, { height: rightFillAnim, backgroundColor: rightFillColor }]} />
                 </View>
@@ -518,10 +518,10 @@ const styles = StyleSheet.create({
   // flexGrow:1 + justifyContent:'center' = centered when short, scrollable when tells expand.
   resultsScrollContent: { flexGrow: 1, justifyContent: 'center', gap: 14 },
   verdictBlock:         { alignItems: 'center' },
-  verdict:              { fontSize: 40, fontFamily: fonts.bold, textAlign: 'center' },
+  verdict:              { fontSize: 54, fontFamily: fonts.bold, textAlign: 'center' },
   verdictCorrect:       { color: colors.correct },
   verdictIncorrect:     { color: colors.incorrect },
-  subtitle:             { fontSize: 14, fontFamily: fonts.medium, color: colors.textPrimary, textAlign: 'center', marginTop: 4 },
+  subtitle:             { fontSize: 17, fontFamily: fonts.medium, color: colors.textPrimary, textAlign: 'center', marginTop: 4 },
   bottomContent:        { gap: 12, paddingHorizontal: 16 },
 
   // ── Image row (same structure both layers) ────────────────────
@@ -540,15 +540,15 @@ const styles = StyleSheet.create({
   // ── Per-card labels (anchored below each image) ───────────────
   imageCardCol: { alignItems: 'center', gap: 10 },
   cardLabel:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
-  cardBadge:    { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
-  cardPct:      { fontSize: 20, fontFamily: fonts.bold },
-  cardTag:      { fontSize: 14, fontFamily: fonts.semiBold, color: colors.textPrimary, letterSpacing: 1.5 },
+  cardBadge:    { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  cardPct:      { fontSize: 22, fontFamily: fonts.bold },
+  cardTag:      { fontSize: 15, fontFamily: fonts.semiBold, color: colors.textPrimary, letterSpacing: 1.5 },
 
   // ── Bottom content (inside results ScrollView) ────────────────
   totalVotes:    { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center' },
   actionRow:     { flexDirection: 'row', gap: 10 },
-  tellsBtn:      { flex: 1, paddingVertical: 15, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
-  tellsBtnText:  { fontSize: 14, fontFamily: fonts.semiBold, color: colors.textSecondary },
+  tellsBtn:      { flex: 1, paddingVertical: 15, borderWidth: 2, borderColor: '#555', borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
+  tellsBtnText:  { fontSize: 14, fontFamily: fonts.semiBold, color: colors.textPrimary },
 
   // ── Tells section ─────────────────────────────────────────────
   collapsedTells:  { height: 0, overflow: 'hidden' },
