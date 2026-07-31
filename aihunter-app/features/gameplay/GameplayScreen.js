@@ -41,7 +41,6 @@ export default function GameplayScreen() {
   const zoomTellRef   = useRef(null);
   const [selectedSide, setSelectedSide] = useState(null); // 'left' | 'right' — pre-confirm pick
   const [inspectSide,  setInspectSide]  = useState(null); // 'left' | 'right' — full-screen zoom
-  const inspectRef    = useRef(null);
   const [aiLayout,  setAiLayout]  = useState({ width: 0, height: 0 });
 
   // Increment on every fetchTask so images always remount even if task.id repeats
@@ -242,7 +241,7 @@ export default function GameplayScreen() {
                   {selectedSide === 'left' && (
                     <TouchableOpacity
                       style={styles.zoomIconBtn}
-                      onPress={() => { light(); inspectRef.current = 'left'; setInspectSide('left'); }}
+                      onPress={() => { light(); setInspectSide('left'); }}
                     >
                       <Feather name="maximize-2" size={13} color="#fff" />
                     </TouchableOpacity>
@@ -270,7 +269,7 @@ export default function GameplayScreen() {
                   {selectedSide === 'right' && (
                     <TouchableOpacity
                       style={styles.zoomIconBtn}
-                      onPress={() => { light(); inspectRef.current = 'right'; setInspectSide('right'); }}
+                      onPress={() => { light(); setInspectSide('right'); }}
                     >
                       <Feather name="maximize-2" size={13} color="#fff" />
                     </TouchableOpacity>
@@ -279,14 +278,17 @@ export default function GameplayScreen() {
               </View>
             </View>
 
-            {/* Confirm button — pinned at bottom, appears after selection */}
-            {selectedSide && (
-              <View style={styles.confirmContainer}>
-                <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirm} activeOpacity={0.85}>
-                  <Text style={styles.confirmBtnText}>Confirm  →</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+            {/* Confirm button — always rendered to hold space; invisible until selection */}
+            <View style={styles.confirmContainer}>
+              <TouchableOpacity
+                style={[styles.confirmBtn, !selectedSide && { opacity: 0 }]}
+                onPress={handleConfirm}
+                activeOpacity={0.85}
+                disabled={!selectedSide}
+              >
+                <Text style={styles.confirmBtnText}>Confirm  →</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </Animated.View>
 
@@ -458,39 +460,42 @@ export default function GameplayScreen() {
         </View>
       </View>
 
-      {/* ── INSPECT OVERLAY ─ full-screen pinch-to-zoom image view ── */}
-      <View
-        style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.bg, opacity: inspectSide ? 1 : 0.001 }]}
-        pointerEvents={inspectSide ? 'auto' : 'none'}
-      >
-        <View style={[styles.modalHeader, { paddingTop: insets.top + 8 }]}>
-          <TouchableOpacity onPress={() => setInspectSide(null)} style={styles.modalCloseBtn}>
-            <Feather name="x" size={22} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.modalTitle}>Inspect</Text>
-          <View style={{ width: 44 }} />
-        </View>
-        <ScrollView
-          style={{ flex: 1 }}
-          minimumZoomScale={1}
-          maximumZoomScale={4}
-          bouncesZoom
-          centerContent
-          showsHorizontalScrollIndicator={false}
-          showsVerticalScrollIndicator={false}
+      {/* ── INSPECT OVERLAYS ─ one per side, both always pre-loaded ── */}
+      {(['left', 'right']).map(side => (
+        <View
+          key={side}
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.bg, opacity: inspectSide === side ? 1 : 0.001 }]}
+          pointerEvents={inspectSide === side ? 'auto' : 'none'}
         >
-          <Image
-            source={{ uri: inspectRef.current === 'left' ? leftUrl : rightUrl }}
-            style={{ width: SW, height: SH - insets.top - 56 - insets.bottom - 72 }}
-            resizeMode="contain"
-          />
-        </ScrollView>
-        <View style={[styles.inspectFooter, { paddingBottom: insets.bottom + 16 }]}>
-          <TouchableOpacity style={styles.modalDoneBtn} onPress={() => setInspectSide(null)}>
-            <Text style={styles.modalDoneText}>Done</Text>
-          </TouchableOpacity>
+          <View style={[styles.modalHeader, { paddingTop: insets.top + 8 }]}>
+            <TouchableOpacity onPress={() => setInspectSide(null)} style={styles.modalCloseBtn}>
+              <Feather name="x" size={22} color={colors.textPrimary} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Inspect</Text>
+            <View style={{ width: 44 }} />
+          </View>
+          <ScrollView
+            style={{ flex: 1 }}
+            minimumZoomScale={1}
+            maximumZoomScale={4}
+            bouncesZoom
+            centerContent
+            showsHorizontalScrollIndicator={false}
+            showsVerticalScrollIndicator={false}
+          >
+            <Image
+              source={{ uri: side === 'left' ? leftUrl : rightUrl }}
+              style={{ width: SW, height: SH - insets.top - 56 - insets.bottom - 72 }}
+              resizeMode="contain"
+            />
+          </ScrollView>
+          <View style={[styles.inspectFooter, { paddingBottom: insets.bottom + 16 }]}>
+            <TouchableOpacity style={styles.modalDoneBtn} onPress={() => setInspectSide(null)}>
+              <Text style={styles.modalDoneText}>Done</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      ))}
 
     </View>
   );
