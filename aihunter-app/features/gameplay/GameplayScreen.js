@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
   resultsLayer: { backgroundColor: colors.bg },
 
   // ── Playing layer ─────────────────────────────────────────────
-  playingTop:    { height: 170, justifyContent: 'flex-end', paddingBottom: 14 },
+  playingTop:    { height: 162, justifyContent: 'flex-end', paddingBottom: 14 },
   playingBottom: { flex: 1, justifyContent: 'flex-end' },
   prompt:        { fontSize: 23, fontFamily: fonts.semiBold, color: colors.textPrimary, textAlign: 'center', paddingHorizontal: 16 },
   errorText:     { color: colors.incorrect, fontSize: 16, fontFamily: fonts.medium, textAlign: 'center', paddingHorizontal: 16 },
