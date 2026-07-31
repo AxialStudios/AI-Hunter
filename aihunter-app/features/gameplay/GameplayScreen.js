@@ -281,10 +281,10 @@ export default function GameplayScreen() {
             {/* Confirm button — always rendered to hold space; invisible until selection */}
             <View style={styles.confirmContainer}>
               <TouchableOpacity
-                style={[styles.confirmBtn, !selectedSide && { opacity: 0 }]}
+                style={[styles.confirmBtn, (!selectedSide || phase !== 'playing') && { opacity: 0 }]}
                 onPress={handleConfirm}
                 activeOpacity={0.85}
-                disabled={!selectedSide}
+                disabled={!selectedSide || phase !== 'playing'}
               >
                 <Text style={styles.confirmBtnText}>Confirm  →</Text>
               </TouchableOpacity>
