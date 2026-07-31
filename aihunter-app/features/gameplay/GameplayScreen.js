@@ -41,6 +41,8 @@ export default function GameplayScreen() {
   const zoomTellRef   = useRef(null);
   const [selectedSide, setSelectedSide] = useState(null); // 'left' | 'right' — pre-confirm pick
   const [inspectSide,  setInspectSide]  = useState(null); // 'left' | 'right' — full-screen zoom
+  const leftScrollRef  = useRef(null);
+  const rightScrollRef = useRef(null);
   const [aiLayout,  setAiLayout]  = useState({ width: 0, height: 0 });
 
   // Increment on every fetchTask so images always remount even if task.id repeats
@@ -168,6 +170,18 @@ export default function GameplayScreen() {
         Animated.timing(rightFillAnim, { toValue: rightPct / 100, duration: 600, useNativeDriver: true }),
       ]).start();
     }, 50);
+  }
+
+  function closeInspect() {
+    const ref = inspectSide === 'left' ? leftScrollRef : rightScrollRef;
+    setInspectSide(null);
+    // Reset zoom+scroll after the overlay is hidden (opacity:0.001 is instant)
+    requestAnimationFrame(() => {
+      ref.current?.scrollTo({ x: 0, y: 0, animated: false });
+      ref.current?.getScrollResponder()?.scrollResponderZoomTo({
+        x: 0, y: 0, width: SW, height: SH, animated: false,
+      });
+    });
   }
 
   function handleNextCard() {
@@ -476,21 +490,23 @@ export default function GameplayScreen() {
         </View>
       </View>
 
-      {/* Pre-load inspect images into RN's cache so the overlay opens flash-free */}
-      {leftUrl  && <Image source={{ uri: leftUrl  }} style={styles.preload} />}
-      {rightUrl && <Image source={{ uri: rightUrl }} style={styles.preload} />}
-
-      {/* ── INSPECT OVERLAY ─ unmounted when closed so scroll/zoom always resets ── */}
-      {inspectSide && (
-        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.bg }]} pointerEvents="auto">
+      {/* ── INSPECT OVERLAYS ─ always mounted so images stay GPU-composited (no open flash).
+           Zoom/scroll resets imperatively via ref when the overlay is hidden. ── */}
+      {(['left', 'right']).map(side => (
+        <View
+          key={side}
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.bg, opacity: inspectSide === side ? 1 : 0.001 }]}
+          pointerEvents={inspectSide === side ? 'auto' : 'none'}
+        >
           <View style={[styles.modalHeader, { paddingTop: insets.top + 8 }]}>
-            <TouchableOpacity onPress={() => setInspectSide(null)} style={styles.modalCloseBtn}>
+            <TouchableOpacity onPress={closeInspect} style={styles.modalCloseBtn}>
               <Feather name="x" size={22} color={colors.textPrimary} />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Inspect</Text>
             <View style={{ width: 44 }} />
           </View>
           <ScrollView
+            ref={side === 'left' ? leftScrollRef : rightScrollRef}
             style={{ flex: 1 }}
             minimumZoomScale={1}
             maximumZoomScale={4}
@@ -500,18 +516,18 @@ export default function GameplayScreen() {
             showsVerticalScrollIndicator={false}
           >
             <Image
-              source={{ uri: inspectSide === 'left' ? leftUrl : rightUrl }}
+              source={{ uri: side === 'left' ? leftUrl : rightUrl }}
               style={{ width: SW, height: SH - insets.top - 56 - insets.bottom - 72 }}
               resizeMode="contain"
             />
           </ScrollView>
           <View style={[styles.inspectFooter, { paddingBottom: insets.bottom + 16 }]}>
-            <TouchableOpacity style={styles.modalDoneBtn} onPress={() => setInspectSide(null)}>
+            <TouchableOpacity style={styles.modalDoneBtn} onPress={closeInspect}>
               <Text style={styles.modalDoneText}>Done</Text>
             </TouchableOpacity>
           </View>
         </View>
-      )}
+      ))}
 
     </View>
   );
@@ -589,8 +605,6 @@ const styles = StyleSheet.create({
 
   nextBtn:     { flex: 1, backgroundColor: colors.textPrimary, paddingVertical: 18, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   nextBtnText: { color: colors.bg, fontSize: 17, fontFamily: fonts.bold },
-
-  preload: { position: 'absolute', width: 0, height: 0, opacity: 0 },
 
   // ── Zoom modal ────────────────────────────────────────────────
   modalContainer:   { flex: 1, backgroundColor: '#000' },
