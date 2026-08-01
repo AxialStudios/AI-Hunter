@@ -841,7 +841,7 @@ const styles = StyleSheet.create({
 
   // ── Tells section ─────────────────────────────────────────────
   collapsedTells:  { height: 0, overflow: 'hidden' },
-  tellsSection:    { gap: 20 },
+  tellsSection:    { gap: 12 },
   tellsHeading:    { fontSize: 18, fontFamily: fonts.bold, color: colors.textPrimary, textAlign: 'center' },
   aiImageWrapper:  { width: '100%', aspectRatio: 0.9, borderRadius: radius.lg, overflow: 'hidden' },
   aiImage:         { width: '100%', height: '100%' },
@@ -850,11 +850,11 @@ const styles = StyleSheet.create({
   highlightRing:   { ...StyleSheet.absoluteFillObject, borderWidth: 2, borderColor: 'rgba(255,255,255,0.85)' },
   highlightNum:    { fontSize: 13, fontFamily: fonts.bold, color: '#FFF', textShadowColor: 'rgba(0,0,0,0.7)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
   tellsSubheading: { fontSize: 14, fontFamily: fonts.bold, color: colors.textPrimary, textTransform: 'uppercase', letterSpacing: 1.5, textAlign: 'center' },
-  tellItem:        { gap: 5 },
+  tellItem:        { backgroundColor: colors.surface, borderRadius: radius.md, padding: 16, gap: 5 },
   tellItemHeader:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
   tellNum:         { fontSize: 13, fontFamily: fonts.semiBold, color: colors.textSecondary, width: 16, textAlign: 'right' },
   tellLabel:       { fontSize: 17, fontFamily: fonts.bold, color: colors.textPrimary, flex: 1 },
-  tellDescription: { fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 21 },
+  tellDescription: { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 20, paddingLeft: 26 },
 
   nextBtn:     { flex: 1, backgroundColor: colors.textPrimary, paddingVertical: 18, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   nextBtnText: { color: colors.bg, fontSize: 17, fontFamily: fonts.bold },
