@@ -63,6 +63,14 @@ export default function GameplayScreen() {
     onMoveShouldSetPanResponder:  () => true,
 
     onPanResponderGrant: (e) => {
+      // Stop any running spring so we anchor from the actual current position
+      inspectScale.stopAnimation();
+      inspectTransX.stopAnimation();
+      inspectTransY.stopAnimation();
+      _iBaseScale.current = inspectScale.__getValue();
+      _iBaseTX.current    = inspectTransX.__getValue();
+      _iBaseTY.current    = inspectTransY.__getValue();
+
       const t = e.nativeEvent.touches;
       _iNumTouches.current = t.length;
       if (t.length >= 2) {
@@ -82,16 +90,18 @@ export default function GameplayScreen() {
       const t = e.nativeEvent.touches;
 
       if (t.length >= 2) {
-        // Re-anchor when finger count changes
+        // Re-anchor when finger count changes mid-gesture
         if (_iNumTouches.current !== t.length) {
           const dx = t[0].pageX - t[1].pageX;
           const dy = t[0].pageY - t[1].pageY;
           _iPinchStartDist.current = Math.sqrt(dx * dx + dy * dy) || 1;
-          _iPinchBaseSc.current    = _iBaseScale.current;
+          const cur = inspectScale.__getValue();
+          _iPinchBaseSc.current = cur;
+          _iBaseScale.current   = cur;
+          _iBaseTX.current      = inspectTransX.__getValue();
+          _iBaseTY.current      = inspectTransY.__getValue();
           _iPanStartX.current = (t[0].pageX + t[1].pageX) / 2;
           _iPanStartY.current = (t[0].pageY + t[1].pageY) / 2;
-          _iBaseTX.current = inspectTransX.__getValue();
-          _iBaseTY.current = inspectTransY.__getValue();
           _iNumTouches.current = t.length;
           return;
         }
@@ -102,22 +112,28 @@ export default function GameplayScreen() {
         const newS = Math.max(1, Math.min(4, _iPinchBaseSc.current * (dist / _iPinchStartDist.current)));
         inspectScale.setValue(newS);
 
+        // translateX/Y are in pre-scale space, so screen-space midpoint delta
+        // must be divided by newS to produce 1:1 apparent movement.
+        // Formula: newTX = (baseTX * baseSc + screenDelta) / newS
         const midX = (t[0].pageX + t[1].pageX) / 2;
         const midY = (t[0].pageY + t[1].pageY) / 2;
-        inspectTransX.setValue(_iBaseTX.current + midX - _iPanStartX.current);
-        inspectTransY.setValue(_iBaseTY.current + midY - _iPanStartY.current);
+        inspectTransX.setValue((_iBaseTX.current * _iPinchBaseSc.current + midX - _iPanStartX.current) / newS);
+        inspectTransY.setValue((_iBaseTY.current * _iPinchBaseSc.current + midY - _iPanStartY.current) / newS);
 
       } else if (t.length === 1) {
         if (_iNumTouches.current !== 1) {
+          const cur = inspectScale.__getValue();
+          _iBaseScale.current = cur;
+          _iBaseTX.current    = inspectTransX.__getValue();
+          _iBaseTY.current    = inspectTransY.__getValue();
           _iPanStartX.current = t[0].pageX;
           _iPanStartY.current = t[0].pageY;
-          _iBaseTX.current = inspectTransX.__getValue();
-          _iBaseTY.current = inspectTransY.__getValue();
           _iNumTouches.current = 1;
           return;
         }
-        inspectTransX.setValue(_iBaseTX.current + t[0].pageX - _iPanStartX.current);
-        inspectTransY.setValue(_iBaseTY.current + t[0].pageY - _iPanStartY.current);
+        // Divide screen-space delta by scale so 1px of finger = 1px apparent movement
+        inspectTransX.setValue(_iBaseTX.current + (t[0].pageX - _iPanStartX.current) / _iBaseScale.current);
+        inspectTransY.setValue(_iBaseTY.current + (t[0].pageY - _iPanStartY.current) / _iBaseScale.current);
       }
 
       _iNumTouches.current = t.length;
@@ -680,10 +696,8 @@ export default function GameplayScreen() {
       </View>
 
       {/* ── INSPECT OVERLAY ── PanResponder-based pinch-to-zoom.
-           Single overlay; image source swaps on inspectSide change (already
-           in SDWebImage cache from main cards, so swap is instant).
-           All gesture state lives in Animated.Values + plain refs — reset via
-           .setValue() in closeInspect(), no iOS UIScrollView state involved. ── */}
+           Both images always mounted (source never changes = no flash on open).
+           Gesture state in Animated.Values + refs; reset via .setValue() on close. ── */}
       <View
         style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.bg, opacity: inspectSide ? 1 : 0.001 }]}
         pointerEvents={inspectSide ? 'auto' : 'none'}
@@ -700,14 +714,22 @@ export default function GameplayScreen() {
           style={{ flex: 1, overflow: 'hidden' }}
           {...inspectPanResponder.panHandlers}
         >
-          <Animated.Image
-            source={{ uri: inspectSide === 'left' ? leftUrl : rightUrl }}
-            style={[
-              StyleSheet.absoluteFillObject,
-              { transform: [{ scale: inspectScale }, { translateX: inspectTransX }, { translateY: inspectTransY }] },
-            ]}
-            resizeMode="contain"
-          />
+          {/* Two always-mounted images — source never changes, so no flash when
+              switching sides. Only opacity toggles (0/1) per active side. */}
+          {(['left', 'right']).map(side => (
+            <Animated.Image
+              key={side}
+              source={{ uri: side === 'left' ? leftUrl : rightUrl }}
+              style={[
+                StyleSheet.absoluteFillObject,
+                {
+                  opacity: inspectSide === side ? 1 : 0,
+                  transform: [{ scale: inspectScale }, { translateX: inspectTransX }, { translateY: inspectTransY }],
+                },
+              ]}
+              resizeMode="contain"
+            />
+          ))}
         </View>
 
         <View style={[styles.inspectFooter, { paddingBottom: insets.bottom + 16 }]}>
