@@ -620,7 +620,7 @@ export default function GameplayScreen() {
               {/* Conditionally-mounted: fresh UIScrollView = clean zoom every open */}
               {isActive && inspectScrollH > 0 && (
                 <ScrollView
-                  style={StyleSheet.absoluteFillObject}
+                  style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.bg }]}
                   minimumZoomScale={1}
                   maximumZoomScale={4}
                   bouncesZoom
