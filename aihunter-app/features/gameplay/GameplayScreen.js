@@ -645,12 +645,12 @@ export default function GameplayScreen() {
                     {showTells && tells.map((tell, i) => (
                       <TouchableOpacity
                         key={i}
-                        style={styles.tellCard}
+                        style={styles.tellItem}
                         onPress={() => tell.x != null && (light(), zoomTellRef.current = tell, setZoomTell(tell))}
                         activeOpacity={tell.x != null ? 0.72 : 1}
                       >
-                        <View style={styles.tellCardHeader}>
-                          <View style={styles.tellBadge}><Text style={styles.tellBadgeNum}>{i + 1}</Text></View>
+                        <View style={styles.tellItemHeader}>
+                          <Text style={styles.tellNum}>{i + 1}</Text>
                           <Text style={styles.tellLabel}>{tell.label}</Text>
                         </View>
                         <Text style={styles.tellDescription}>{tell.description}</Text>
@@ -841,7 +841,7 @@ const styles = StyleSheet.create({
 
   // ── Tells section ─────────────────────────────────────────────
   collapsedTells:  { height: 0, overflow: 'hidden' },
-  tellsSection:    { gap: 12 },
+  tellsSection:    { gap: 20 },
   tellsHeading:    { fontSize: 18, fontFamily: fonts.bold, color: colors.textPrimary, textAlign: 'center' },
   aiImageWrapper:  { width: '100%', aspectRatio: 0.9, borderRadius: radius.lg, overflow: 'hidden' },
   aiImage:         { width: '100%', height: '100%' },
@@ -850,10 +850,9 @@ const styles = StyleSheet.create({
   highlightRing:   { ...StyleSheet.absoluteFillObject, borderWidth: 2, borderColor: 'rgba(255,255,255,0.85)' },
   highlightNum:    { fontSize: 13, fontFamily: fonts.bold, color: '#FFF', textShadowColor: 'rgba(0,0,0,0.7)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
   tellsSubheading: { fontSize: 14, fontFamily: fonts.bold, color: colors.textPrimary, textTransform: 'uppercase', letterSpacing: 1.5, textAlign: 'center' },
-  tellCard:        { backgroundColor: colors.surface, borderRadius: radius.md, padding: 16 },
-  tellCardHeader:  { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
-  tellBadge:       { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  tellBadgeNum:    { fontSize: 12, fontFamily: fonts.bold, color: colors.textPrimary },
+  tellItem:        { gap: 5 },
+  tellItemHeader:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  tellNum:         { fontSize: 13, fontFamily: fonts.semiBold, color: colors.textSecondary, width: 16, textAlign: 'right' },
   tellLabel:       { fontSize: 17, fontFamily: fonts.bold, color: colors.textPrimary, flex: 1 },
   tellDescription: { fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 21 },
 
