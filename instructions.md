@@ -129,6 +129,7 @@ You can, on your iPhone: complete onboarding → see a card → tap the real ima
 - Monthly "Deception Report" from the event log
 - Data-licensing outreach (detection companies, trust & safety, academia) — treat as upside, not the plan
 - Deep analylitics for my ends such as total rounds played, active users, etc
+- Daily puzzle like wordle with an export-able text message, stats, and nice animation's
 
 ---
 
