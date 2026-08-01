@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { useHaptics } from '../../context/HapticsContext';
 import { colors, fonts, radius } from '../../constants/theme';
+import { Feather } from '@expo/vector-icons';
 
 const AGE_OPTIONS = [
   { value: 'Under 13', label: 'Under 13', emoji: '🧒' },
@@ -171,7 +172,7 @@ function OptionRow({ emoji, label, sub, selected, onPress }) {
         <Text style={[styles.optionLabel, selected && styles.optionLabelSelected]}>{label}</Text>
         {sub ? <Text style={styles.optionSub}>{sub}</Text> : null}
       </View>
-      {selected && <Text style={styles.checkmark}>✓</Text>}
+      {selected && <Feather name="check" size={19} color={colors.textPrimary} />}
     </TouchableOpacity>
   );
 }
@@ -200,7 +201,6 @@ const styles = StyleSheet.create({
   optionLabel:        { fontSize: 17, fontFamily: fonts.semiBold, color: '#CCCCCC' },
   optionLabelSelected:{ color: colors.textPrimary },
   optionSub:          { fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary, marginTop: 2 },
-  checkmark:          { fontSize: 16, color: colors.textPrimary, fontFamily: fonts.bold },
 
   ageGate:            { color: colors.incorrect, fontFamily: fonts.semiBold, fontSize: 14, textAlign: 'center' },
   consent:            { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 20, textAlign: 'center' },
