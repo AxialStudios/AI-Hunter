@@ -462,6 +462,7 @@ export default function GameplayScreen() {
                 {selectedSide === 'left' && (
                   <TouchableOpacity
                     style={styles.zoomIconBtn}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                     onPress={() => { light(); openInspect('left'); }}
                   >
                     <Feather name="maximize-2" size={13} color="#fff" />
@@ -490,6 +491,7 @@ export default function GameplayScreen() {
                 {selectedSide === 'right' && (
                   <TouchableOpacity
                     style={styles.zoomIconBtn}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                     onPress={() => { light(); openInspect('right'); }}
                   >
                     <Feather name="maximize-2" size={13} color="#fff" />
