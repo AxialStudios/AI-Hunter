@@ -34,6 +34,8 @@ export default function GameplayScreen() {
   const [tappedSide, setTappedSide] = useState(null);
   const [result, setResult]         = useState(null);
   const [loadError, setLoadError]   = useState(null);
+  const [leftPctDisplay,  setLeftPctDisplay]  = useState(0);
+  const [rightPctDisplay, setRightPctDisplay] = useState(0);
   const startTime                   = useRef(Date.now());
 
   const [showTells, setShowTells] = useState(false);
@@ -187,6 +189,10 @@ export default function GameplayScreen() {
   const rightFillAnim  = useRef(new Animated.Value(0)).current;
   const leftFillTranslateY  = useRef(leftFillAnim.interpolate({ inputRange: [0, 1], outputRange: [CARD_H / 2, 0] })).current;
   const rightFillTranslateY = useRef(rightFillAnim.interpolate({ inputRange: [0, 1], outputRange: [CARD_H / 2, 0] })).current;
+  const verdictTranslateY = useRef(new Animated.Value(10)).current;
+  const verdictOpacity = useRef(new Animated.Value(0)).current;
+  const labelsOpacity  = useRef(new Animated.Value(0)).current;
+  const bottomOpacity  = useRef(new Animated.Value(0)).current;
   const shimmerAnims   = useRef(Array.from({ length: 5 }, () => new Animated.Value(0))).current;
 
   useFocusEffect(useCallback(() => { fetchTask(); }, []));
@@ -211,6 +217,12 @@ export default function GameplayScreen() {
     fadeAnim.setValue(0);
     leftFillAnim.setValue(0);
     rightFillAnim.setValue(0);
+    verdictTranslateY.setValue(10);
+    verdictOpacity.setValue(0);
+    labelsOpacity.setValue(0);
+    bottomOpacity.setValue(0);
+    setLeftPctDisplay(0);
+    setRightPctDisplay(0);
     shimmerAnims.forEach(v => v.setValue(0));
 
     const cached = consumeCachedTask();
@@ -296,31 +308,55 @@ export default function GameplayScreen() {
     revealResults(data);
   }
 
+  function countUp(setter, target, duration) {
+    const start = Date.now();
+    const tick = () => {
+      const p = Math.min((Date.now() - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - p, 3); // out-cubic matches bar fill
+      setter(Math.round(eased * target));
+      if (p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+
   function revealResults(data) {
     const leftPct  = leftIsReal ? data.real_pct : data.ai_pct;
     const rightPct = leftIsReal ? data.ai_pct   : data.real_pct;
 
     setPhase('results');
-    // Prefetch already started in handleImageLoad (when both playing images loaded).
-    // Call again here as a fallback for the rare case the user voted before both
-    // images finished loading — taskCache deduplicates concurrent calls.
     prefetchNextTask(supabase).then(t => {
       if (t && !nextTask) { nextLeftIsReal.current = Math.random() > 0.5; setNextTask(t); }
     });
 
-    // Delay the native opacity swap by one JS tick so React has time to commit
-    // the result state and lay out the results layer correctly before it becomes
-    // visible. Without this, resultsOpacity.setValue(1) fires before result is
-    // committed — results shows with no content, then jumps when React renders.
     setTimeout(() => {
       playingOpacity.setValue(0);
       resultsOpacity.setValue(1);
+      verdictTranslateY.setValue(10);
+      verdictOpacity.setValue(0);
+      labelsOpacity.setValue(0);
+      bottomOpacity.setValue(0);
+      setLeftPctDisplay(0);
+      setRightPctDisplay(0);
 
-      // Fills paint onto the results cards. Native driver — no JS/native sync conflict.
+      // Beat 1: bars fill immediately — bars are the drama
+      leftFillAnim.setValue(0);
+      rightFillAnim.setValue(0);
       Animated.parallel([
-        Animated.timing(leftFillAnim,  { toValue: leftPct  / 100, duration: 600, useNativeDriver: true }),
-        Animated.timing(rightFillAnim, { toValue: rightPct / 100, duration: 600, useNativeDriver: true }),
+        Animated.timing(leftFillAnim,  { toValue: leftPct  / 100, duration: 900, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(rightFillAnim, { toValue: rightPct / 100, duration: 900, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       ]).start();
+      countUp(setLeftPctDisplay,  leftPct,  900);
+      countUp(setRightPctDisplay, rightPct, 900);
+
+      // Beat 2: verdict + labels + bottom all land together as bars finish
+      setTimeout(() => {
+        Animated.parallel([
+          Animated.timing(verdictOpacity, { toValue: 1, duration: 90, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+          Animated.timing(labelsOpacity,  { toValue: 1, duration: 90, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+          Animated.timing(bottomOpacity,  { toValue: 1, duration: 90, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+        ]).start();
+        setTimeout(() => medium(), 86);
+      }, 875);
     }, 50);
   }
 
@@ -363,6 +399,12 @@ export default function GameplayScreen() {
           fadeAnim.setValue(0);
           leftFillAnim.setValue(0);
           rightFillAnim.setValue(0);
+          verdictTranslateY.setValue(10);
+          verdictOpacity.setValue(0);
+          labelsOpacity.setValue(0);
+          bottomOpacity.setValue(0);
+          setLeftPctDisplay(0);
+          setRightPctDisplay(0);
           shimmerAnims.forEach(v => v.setValue(0));
 
           consumeCachedTask(); // clear module-level cache
@@ -409,8 +451,6 @@ export default function GameplayScreen() {
   const rightFillColor = !leftIsReal ? CORRECT_FILL : INCORRECT_FILL;
   const leftColor      = leftIsReal  ? colors.correct : colors.incorrect;
   const rightColor     = !leftIsReal ? colors.correct : colors.incorrect;
-  const leftPct        = result ? (leftIsReal  ? result.real_pct : result.ai_pct) : 0;
-  const rightPct       = result ? (!leftIsReal ? result.real_pct : result.ai_pct) : 0;
   const tells          = task ? (task.tell_annotations || []) : [];
 
   return (
@@ -535,14 +575,14 @@ export default function GameplayScreen() {
                 always sit at the exact same Y as the playing layer. */}
             <View style={styles.resultsVerdictTop}>
               {result && (
-                <View style={styles.verdictBlock}>
+                <Animated.View style={[styles.verdictBlock, { opacity: verdictOpacity }]}>
                   <Text style={[styles.verdict, result.was_correct ? styles.verdictCorrect : styles.verdictIncorrect]}>
                     {result.was_correct ? 'Correct!' : 'Fooled!'}
                   </Text>
                   <Text style={styles.subtitle}>
                     {result.was_correct ? 'You spotted the real image.' : 'You picked the AI image.'}
                   </Text>
-                </View>
+                </Animated.View>
               )}
             </View>
 
@@ -554,13 +594,13 @@ export default function GameplayScreen() {
                   <Animated.View style={[StyleSheet.absoluteFillObject, { backgroundColor: leftFillColor, transform: [{ translateY: leftFillTranslateY }, { scaleY: leftFillAnim }] }]} />
                 </View>
                 {result && (
-                  <View style={styles.cardLabel}>
+                  <Animated.View style={[styles.cardLabel, { opacity: labelsOpacity }]}>
                     <View style={[styles.cardBadge, { backgroundColor: leftColor }]}>
                       <Feather name={leftIsReal ? 'check' : 'x'} size={13} color="#FFF" />
                     </View>
-                    <Text style={[styles.cardPct, { color: leftColor }]}>{leftPct}%</Text>
+                    <Text style={[styles.cardPct, { color: leftColor }]}>{leftPctDisplay}%</Text>
                     <Text style={styles.cardTag}>{leftIsReal ? 'REAL' : 'AI'}</Text>
-                  </View>
+                  </Animated.View>
                 )}
               </View>
 
@@ -570,24 +610,24 @@ export default function GameplayScreen() {
                   <Animated.View style={[StyleSheet.absoluteFillObject, { backgroundColor: rightFillColor, transform: [{ translateY: rightFillTranslateY }, { scaleY: rightFillAnim }] }]} />
                 </View>
                 {result && (
-                  <View style={styles.cardLabel}>
+                  <Animated.View style={[styles.cardLabel, { opacity: labelsOpacity }]}>
                     <View style={[styles.cardBadge, { backgroundColor: rightColor }]}>
                       <Feather name={!leftIsReal ? 'check' : 'x'} size={13} color="#FFF" />
                     </View>
-                    <Text style={[styles.cardPct, { color: rightColor }]}>{rightPct}%</Text>
+                    <Text style={[styles.cardPct, { color: rightColor }]}>{rightPctDisplay}%</Text>
                     <Text style={styles.cardTag}>{!leftIsReal ? 'REAL' : 'AI'}</Text>
-                  </View>
+                  </Animated.View>
                 )}
               </View>
             </View>
 
             {result && (
-              <Text style={[styles.totalVotes, { marginTop: 14 }]}>{result.total_votes.toLocaleString()} total votes</Text>
+              <Animated.Text style={[styles.totalVotes, { marginTop: 14, opacity: bottomOpacity }]}>{result.total_votes.toLocaleString()} total votes</Animated.Text>
             )}
 
             {/* Tells + next pair */}
             {result && (
-              <View style={[styles.bottomContent, { marginTop: 14 }]}>
+              <Animated.View style={[styles.bottomContent, { marginTop: 14, opacity: bottomOpacity }]}>
                 {/* Side-by-side action row */}
                 <View style={styles.actionRow}>
                   <TouchableOpacity style={styles.tellsBtn} onPress={() => { light(); setShowTells(v => !v); }}>
@@ -661,7 +701,7 @@ export default function GameplayScreen() {
                       </TouchableOpacity>
                     ))}
                   </View>
-              </View>
+              </Animated.View>
             )}
           </ScrollView>
         </Animated.View>
