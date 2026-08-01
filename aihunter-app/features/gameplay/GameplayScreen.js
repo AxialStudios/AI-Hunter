@@ -45,10 +45,13 @@ export default function GameplayScreen() {
   const rightScrollRef = useRef(null);
   const [aiLayout,      setAiLayout]      = useState({ width: 0, height: 0 });
   const [aiNaturalSize, setAiNaturalSize] = useState({ width: 0, height: 0 });
+  const [nextTask,      setNextTask]      = useState(null);
+  const nextLeftIsReal  = useRef(false);
 
   // Increment on every fetchTask so images always remount even if task.id repeats
   const cardKey        = useRef(0);
   const loadCount      = useRef(0);
+  const fastTransition = useRef(false);
   const playingOpacity = useRef(new Animated.Value(1)).current;
   const resultsOpacity = useRef(new Animated.Value(0)).current;
   const fadeAnim       = useRef(new Animated.Value(0)).current;
@@ -63,6 +66,8 @@ export default function GameplayScreen() {
   useFocusEffect(useCallback(() => { fetchTask(); }, []));
 
   async function fetchTask() {
+    fastTransition.current = false;
+    setNextTask(null);
     setPhase('loading');
     setLoadError(null);
     setResult(null);
@@ -116,8 +121,20 @@ export default function GameplayScreen() {
 
   function handleImageLoad() {
     loadCount.current += 1;
-    if (loadCount.current >= 2) {
-      Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+    if (loadCount.current === 2) {
+      // Both images rendered — start prefetching the next card immediately so
+      // the full gameplay duration (typically 3–20 s) is available for download
+      // and decode before the user taps Next Pair.
+      prefetchNextTask(supabase).then(t => {
+        if (t) { nextLeftIsReal.current = Math.random() > 0.5; setNextTask(t); }
+      });
+
+      if (fastTransition.current) {
+        fastTransition.current = false;
+        Animated.timing(fadeAnim, { toValue: 1, duration: 130, useNativeDriver: true }).start();
+      } else {
+        Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+      }
     }
   }
 
@@ -155,7 +172,12 @@ export default function GameplayScreen() {
     const rightPct = leftIsReal ? data.ai_pct   : data.real_pct;
 
     setPhase('results');
-    prefetchNextTask(supabase);
+    // Prefetch already started in handleImageLoad (when both playing images loaded).
+    // Call again here as a fallback for the rare case the user voted before both
+    // images finished loading — taskCache deduplicates concurrent calls.
+    prefetchNextTask(supabase).then(t => {
+      if (t && !nextTask) { nextLeftIsReal.current = Math.random() > 0.5; setNextTask(t); }
+    });
 
     // Delay the native opacity swap by one JS tick so React has time to commit
     // the result state and lay out the results layer correctly before it becomes
@@ -192,9 +214,40 @@ export default function GameplayScreen() {
     setSelectedSide(null);
     setInspectSide(null);
     setAiNaturalSize({ width: 0, height: 0 });
-    // Only fade out the results layer; playing layer is already at 0
+
     Animated.timing(resultsOpacity, { toValue: 0, duration: 150, useNativeDriver: true })
-      .start(() => fetchTask());
+      .start(() => {
+        if (nextTask) {
+          // Images hidden while source props update in-place (no cardKey change).
+          // The pre-render above keeps decoded textures in GPU memory, so
+          // onLoadEnd fires in <1 frame and fastTransition snaps fadeAnim to 1.
+          fadeAnim.setValue(0);
+          leftFillAnim.setValue(0);
+          rightFillAnim.setValue(0);
+          shimmerAnims.forEach(v => v.setValue(0));
+
+          consumeCachedTask(); // clear module-level cache
+          loadCount.current = 0;
+          fastTransition.current = true;
+          setTask(nextTask);
+          setLeftIsReal(nextLeftIsReal.current);
+          setNextTask(null);
+          setResult(null);
+          setVoting(false);
+          setTappedSide(null);
+          setLoadError(null);
+          startTime.current = Date.now();
+          playingOpacity.setValue(1);
+          setPhase('playing');
+
+          // Kick off prefetch for the card after next
+          prefetchNextTask(supabase).then(t => {
+            if (t) { nextLeftIsReal.current = Math.random() > 0.5; setNextTask(t); }
+          });
+        } else {
+          fetchTask();
+        }
+      });
   }
 
   useEffect(() => {
@@ -563,6 +616,27 @@ export default function GameplayScreen() {
           </View>
         </View>
       ))}
+
+      {/* ── NEXT CARD PRE-RENDER ─ topmost layer so iOS always composites it
+           (never occluded) → textures decoded in GPU memory before transition.
+           opacity:0.001 keeps it invisible while still forcing compositing. ── */}
+      {nextTask && (
+        <View
+          style={{ position: 'absolute', width: CARD_W, height: CARD_H, opacity: 0.001 }}
+          pointerEvents="none"
+        >
+          <Image
+            source={{ uri: nextLeftIsReal.current ? nextTask.real_image_url : nextTask.ai_image_url }}
+            style={StyleSheet.absoluteFillObject}
+            resizeMode="cover"
+          />
+          <Image
+            source={{ uri: nextLeftIsReal.current ? nextTask.ai_image_url : nextTask.real_image_url }}
+            style={StyleSheet.absoluteFillObject}
+            resizeMode="cover"
+          />
+        </View>
+      )}
 
     </View>
   );

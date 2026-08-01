@@ -29,8 +29,9 @@ export async function prefetchNextTask(supabase) {
     ]).catch(() => {});
 
     _task = data;
+    return _task;
   } catch (_) {
-    // silent — GameplayScreen falls back to live fetch
+    return null; // GameplayScreen falls back to live fetch
   } finally {
     _fetching = false;
   }
