@@ -851,7 +851,7 @@ const styles = StyleSheet.create({
   highlightFill:   { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.18)' },
   highlightRing:   { ...StyleSheet.absoluteFillObject, borderWidth: 2, borderColor: 'rgba(255,255,255,0.85)' },
   highlightNum:    { fontSize: 13, fontFamily: fonts.bold, color: '#FFF', textShadowColor: 'rgba(0,0,0,0.7)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
-  tellsSubheading: { fontSize: 16, fontFamily: fonts.bold, color: colors.textPrimary, textAlign: 'center' },
+  tellsSubheading: { fontSize: 18, fontFamily: fonts.bold, color: colors.textPrimary, textAlign: 'center' },
   tellItem:        { backgroundColor: colors.surface, borderRadius: radius.md, padding: 16, gap: 5 },
   tellItemHeader:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
   tellBadge:       { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
