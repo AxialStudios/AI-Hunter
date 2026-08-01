@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, Image, Animated, TouchableOpacity,
-  ScrollView, StyleSheet, Dimensions, ActivityIndicator,
+  ScrollView, StyleSheet, Dimensions, ActivityIndicator, PanResponder,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -41,9 +41,109 @@ export default function GameplayScreen() {
   const zoomTellRef   = useRef(null);
   const [selectedSide, setSelectedSide] = useState(null); // 'left' | 'right' — pre-confirm pick
   const [inspectSide,  setInspectSide]  = useState(null); // 'left' | 'right' — full-screen zoom
-  const [aiLayout,        setAiLayout]        = useState({ width: 0, height: 0 });
-  const [inspectScrollH,  setInspectScrollH]  = useState(0);
+  const [aiLayout,      setAiLayout]      = useState({ width: 0, height: 0 });
   const [aiNaturalSize, setAiNaturalSize] = useState({ width: 0, height: 0 });
+
+  // Inspect pinch-to-zoom: Animated values driven directly by PanResponder.
+  // Reset via .setValue() on close — no iOS UIScrollView state to fight.
+  const inspectScale  = useRef(new Animated.Value(1)).current;
+  const inspectTransX = useRef(new Animated.Value(0)).current;
+  const inspectTransY = useRef(new Animated.Value(0)).current;
+  const _iBaseScale      = useRef(1);
+  const _iBaseTX         = useRef(0);
+  const _iBaseTY         = useRef(0);
+  const _iPinchStartDist = useRef(1);
+  const _iPinchBaseSc    = useRef(1);
+  const _iPanStartX      = useRef(0);
+  const _iPanStartY      = useRef(0);
+  const _iNumTouches     = useRef(0);
+
+  const inspectPanResponder = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder:  () => true,
+
+    onPanResponderGrant: (e) => {
+      const t = e.nativeEvent.touches;
+      _iNumTouches.current = t.length;
+      if (t.length >= 2) {
+        const dx = t[0].pageX - t[1].pageX;
+        const dy = t[0].pageY - t[1].pageY;
+        _iPinchStartDist.current = Math.sqrt(dx * dx + dy * dy) || 1;
+        _iPinchBaseSc.current    = _iBaseScale.current;
+        _iPanStartX.current = (t[0].pageX + t[1].pageX) / 2;
+        _iPanStartY.current = (t[0].pageY + t[1].pageY) / 2;
+      } else {
+        _iPanStartX.current = t[0].pageX;
+        _iPanStartY.current = t[0].pageY;
+      }
+    },
+
+    onPanResponderMove: (e) => {
+      const t = e.nativeEvent.touches;
+
+      if (t.length >= 2) {
+        // Re-anchor when finger count changes
+        if (_iNumTouches.current !== t.length) {
+          const dx = t[0].pageX - t[1].pageX;
+          const dy = t[0].pageY - t[1].pageY;
+          _iPinchStartDist.current = Math.sqrt(dx * dx + dy * dy) || 1;
+          _iPinchBaseSc.current    = _iBaseScale.current;
+          _iPanStartX.current = (t[0].pageX + t[1].pageX) / 2;
+          _iPanStartY.current = (t[0].pageY + t[1].pageY) / 2;
+          _iBaseTX.current = inspectTransX.__getValue();
+          _iBaseTY.current = inspectTransY.__getValue();
+          _iNumTouches.current = t.length;
+          return;
+        }
+
+        const dx   = t[0].pageX - t[1].pageX;
+        const dy   = t[0].pageY - t[1].pageY;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const newS = Math.max(1, Math.min(4, _iPinchBaseSc.current * (dist / _iPinchStartDist.current)));
+        inspectScale.setValue(newS);
+
+        const midX = (t[0].pageX + t[1].pageX) / 2;
+        const midY = (t[0].pageY + t[1].pageY) / 2;
+        inspectTransX.setValue(_iBaseTX.current + midX - _iPanStartX.current);
+        inspectTransY.setValue(_iBaseTY.current + midY - _iPanStartY.current);
+
+      } else if (t.length === 1) {
+        if (_iNumTouches.current !== 1) {
+          _iPanStartX.current = t[0].pageX;
+          _iPanStartY.current = t[0].pageY;
+          _iBaseTX.current = inspectTransX.__getValue();
+          _iBaseTY.current = inspectTransY.__getValue();
+          _iNumTouches.current = 1;
+          return;
+        }
+        inspectTransX.setValue(_iBaseTX.current + t[0].pageX - _iPanStartX.current);
+        inspectTransY.setValue(_iBaseTY.current + t[0].pageY - _iPanStartY.current);
+      }
+
+      _iNumTouches.current = t.length;
+    },
+
+    onPanResponderRelease: () => {
+      _iBaseScale.current = inspectScale.__getValue();
+      _iBaseTX.current    = inspectTransX.__getValue();
+      _iBaseTY.current    = inspectTransY.__getValue();
+      _iNumTouches.current = 0;
+
+      // Snap back to neutral if scale drifted below 1
+      if (_iBaseScale.current < 1.05) {
+        _iBaseScale.current = 1;
+        _iBaseTX.current    = 0;
+        _iBaseTY.current    = 0;
+        Animated.parallel([
+          Animated.spring(inspectScale,  { toValue: 1, useNativeDriver: false }),
+          Animated.spring(inspectTransX, { toValue: 0, useNativeDriver: false }),
+          Animated.spring(inspectTransY, { toValue: 0, useNativeDriver: false }),
+        ]).start();
+      }
+    },
+
+    onPanResponderTerminate: () => { _iNumTouches.current = 0; },
+  })).current;
   const [nextTask,      setNextTask]      = useState(null);
   const nextLeftIsReal  = useRef(false);
 
@@ -198,10 +298,14 @@ export default function GameplayScreen() {
   }
 
   function closeInspect() {
+    inspectScale.setValue(1);
+    inspectTransX.setValue(0);
+    inspectTransY.setValue(0);
+    _iBaseScale.current = 1;
+    _iBaseTX.current    = 0;
+    _iBaseTY.current    = 0;
+    _iNumTouches.current = 0;
     setInspectSide(null);
-    // ScrollView is conditionally mounted — it unmounts here and remounts fresh
-    // on the next open, so zoom/pan state is always reset without any imperative
-    // native scroll reset (which was unreliable on iOS UIScrollView).
   }
 
   function handleNextCard() {
@@ -575,76 +679,43 @@ export default function GameplayScreen() {
         </View>
       </View>
 
-      {/* ── INSPECT OVERLAYS ──────────────────────────────────────────────────
-           Layout: outer View always mounted (no bg flash). Inside the flex:1
-           area, an always-mounted Image fills it absolutely — this keeps the
-           GPU texture decoded at the exact inspect-area dimensions so the
-           ScrollView Image loads from cache with no black-screen delay.
-           The ScrollView is conditionally mounted on top: unmounting it on
-           close means iOS creates a fresh UIScrollView every open, so zoom
-           and pan are always reset with no imperative native calls needed.
-           inspectScrollH (set via onLayout) gives the ScrollView the correct
-           explicit height so iOS knows the scroll content size for zoom. ── */}
-      {(['left', 'right']).map(side => {
-        const isActive = inspectSide === side;
-        const url      = side === 'left' ? leftUrl : rightUrl;
-        return (
-          <View
-            key={side}
-            style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.bg, opacity: isActive ? 1 : 0.001 }]}
-            pointerEvents={isActive ? 'auto' : 'none'}
-          >
-            <View style={[styles.modalHeader, { paddingTop: insets.top + 8 }]}>
-              <TouchableOpacity onPress={closeInspect} style={styles.modalCloseBtn}>
-                <Feather name="x" size={22} color={colors.textPrimary} />
-              </TouchableOpacity>
-              <Text style={styles.modalTitle}>Inspect</Text>
-              <View style={{ width: 44 }} />
-            </View>
+      {/* ── INSPECT OVERLAY ── PanResponder-based pinch-to-zoom.
+           Single overlay; image source swaps on inspectSide change (already
+           in SDWebImage cache from main cards, so swap is instant).
+           All gesture state lives in Animated.Values + plain refs — reset via
+           .setValue() in closeInspect(), no iOS UIScrollView state involved. ── */}
+      <View
+        style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.bg, opacity: inspectSide ? 1 : 0.001 }]}
+        pointerEvents={inspectSide ? 'auto' : 'none'}
+      >
+        <View style={[styles.modalHeader, { paddingTop: insets.top + 8 }]}>
+          <TouchableOpacity onPress={closeInspect} style={styles.modalCloseBtn}>
+            <Feather name="x" size={22} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <Text style={styles.modalTitle}>Inspect</Text>
+          <View style={{ width: 44 }} />
+        </View>
 
-            <View
-              style={{ flex: 1 }}
-              onLayout={e => {
-                const h = e.nativeEvent.layout.height;
-                if (h > 0) setInspectScrollH(h);
-              }}
-            >
-              {/* Always-mounted: decoded at exact inspect dimensions so the
-                  ScrollView Image below is an instant SDWebImage cache hit */}
-              <Image
-                source={{ uri: url }}
-                style={StyleSheet.absoluteFillObject}
-                resizeMode="contain"
-              />
+        <View
+          style={{ flex: 1, overflow: 'hidden' }}
+          {...inspectPanResponder.panHandlers}
+        >
+          <Animated.Image
+            source={{ uri: inspectSide === 'left' ? leftUrl : rightUrl }}
+            style={[
+              StyleSheet.absoluteFillObject,
+              { transform: [{ scale: inspectScale }, { translateX: inspectTransX }, { translateY: inspectTransY }] },
+            ]}
+            resizeMode="contain"
+          />
+        </View>
 
-              {/* Conditionally-mounted: fresh UIScrollView = clean zoom every open */}
-              {isActive && inspectScrollH > 0 && (
-                <ScrollView
-                  style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.bg }]}
-                  minimumZoomScale={1}
-                  maximumZoomScale={4}
-                  bouncesZoom
-                  centerContent
-                  showsHorizontalScrollIndicator={false}
-                  showsVerticalScrollIndicator={false}
-                >
-                  <Image
-                    source={{ uri: url }}
-                    style={{ width: SW, height: inspectScrollH }}
-                    resizeMode="contain"
-                  />
-                </ScrollView>
-              )}
-            </View>
-
-            <View style={[styles.inspectFooter, { paddingBottom: insets.bottom + 16 }]}>
-              <TouchableOpacity style={styles.modalDoneBtn} onPress={closeInspect}>
-                <Text style={styles.modalDoneText}>Done</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        );
-      })}
+        <View style={[styles.inspectFooter, { paddingBottom: insets.bottom + 16 }]}>
+          <TouchableOpacity style={styles.modalDoneBtn} onPress={closeInspect}>
+            <Text style={styles.modalDoneText}>Done</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       {/* ── NEXT CARD PRE-RENDER ─ topmost layer so iOS always composites it
            (never occluded) → textures decoded in GPU memory before transition.
