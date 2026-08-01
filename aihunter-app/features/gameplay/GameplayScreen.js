@@ -650,7 +650,9 @@ export default function GameplayScreen() {
                         activeOpacity={tell.x != null ? 0.72 : 1}
                       >
                         <View style={styles.tellItemHeader}>
-                          <Text style={styles.tellNum}>{i + 1}</Text>
+                          <View style={styles.tellBadge}>
+                            <Text style={styles.tellBadgeNum}>{i + 1}</Text>
+                          </View>
                           <Text style={styles.tellLabel}>{tell.label}</Text>
                         </View>
                         <Text style={styles.tellDescription}>{tell.description}</Text>
@@ -852,9 +854,10 @@ const styles = StyleSheet.create({
   tellsSubheading: { fontSize: 14, fontFamily: fonts.bold, color: colors.textPrimary, textTransform: 'uppercase', letterSpacing: 1.5, textAlign: 'center' },
   tellItem:        { backgroundColor: colors.surface, borderRadius: radius.md, padding: 16, gap: 5 },
   tellItemHeader:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  tellNum:         { fontSize: 13, fontFamily: fonts.semiBold, color: colors.textSecondary, width: 16, textAlign: 'right' },
+  tellBadge:       { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  tellBadgeNum:    { fontSize: 12, fontFamily: fonts.bold, color: colors.textSecondary },
   tellLabel:       { fontSize: 17, fontFamily: fonts.bold, color: colors.textPrimary, flex: 1 },
-  tellDescription: { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 20, paddingLeft: 26 },
+  tellDescription: { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 20, paddingLeft: 34 },
 
   nextBtn:     { flex: 1, backgroundColor: colors.textPrimary, paddingVertical: 18, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   nextBtnText: { color: colors.bg, fontSize: 17, fontFamily: fonts.bold },
