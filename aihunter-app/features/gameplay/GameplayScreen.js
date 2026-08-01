@@ -57,6 +57,7 @@ export default function GameplayScreen() {
   const _iPanStartX      = useRef(0);
   const _iPanStartY      = useRef(0);
   const _iNumTouches     = useRef(0);
+  const _iAreaH          = useRef(SH); // updated by onLayout; used for Y-axis clamp
 
   const inspectPanResponder = useRef(PanResponder.create({
     onStartShouldSetPanResponder: () => true,
@@ -112,13 +113,18 @@ export default function GameplayScreen() {
         const newS = Math.max(1, Math.min(4, _iPinchBaseSc.current * (dist / _iPinchStartDist.current)));
         inspectScale.setValue(newS);
 
-        // translateX/Y are in pre-scale space, so screen-space midpoint delta
-        // must be divided by newS to produce 1:1 apparent movement.
+        // translateX/Y are in pre-scale space; screen-space delta / newS → 1:1 apparent movement.
         // Formula: newTX = (baseTX * baseSc + screenDelta) / newS
         const midX = (t[0].pageX + t[1].pageX) / 2;
         const midY = (t[0].pageY + t[1].pageY) / 2;
-        inspectTransX.setValue((_iBaseTX.current * _iPinchBaseSc.current + midX - _iPanStartX.current) / newS);
-        inspectTransY.setValue((_iBaseTY.current * _iPinchBaseSc.current + midY - _iPanStartY.current) / newS);
+        const rawTX = (_iBaseTX.current * _iPinchBaseSc.current + midX - _iPanStartX.current) / newS;
+        const rawTY = (_iBaseTY.current * _iPinchBaseSc.current + midY - _iPanStartY.current) / newS;
+        // Clamp: keep image covering the view at all zoom levels.
+        // At newS=1 this collapses to ±0, forcing centre; at newS=4 allows ±3/8 of dim.
+        const maxTX = SW / 2 * (1 - 1 / newS);
+        const maxTY = _iAreaH.current / 2 * (1 - 1 / newS);
+        inspectTransX.setValue(Math.max(-maxTX, Math.min(maxTX, rawTX)));
+        inspectTransY.setValue(Math.max(-maxTY, Math.min(maxTY, rawTY)));
 
       } else if (t.length === 1) {
         if (_iNumTouches.current !== 1) {
@@ -131,9 +137,14 @@ export default function GameplayScreen() {
           _iNumTouches.current = 1;
           return;
         }
-        // Divide screen-space delta by scale so 1px of finger = 1px apparent movement
-        inspectTransX.setValue(_iBaseTX.current + (t[0].pageX - _iPanStartX.current) / _iBaseScale.current);
-        inspectTransY.setValue(_iBaseTY.current + (t[0].pageY - _iPanStartY.current) / _iBaseScale.current);
+        // Divide screen-space delta by scale so 1px of finger = 1px apparent movement.
+        const s    = _iBaseScale.current;
+        const rawTX = _iBaseTX.current + (t[0].pageX - _iPanStartX.current) / s;
+        const rawTY = _iBaseTY.current + (t[0].pageY - _iPanStartY.current) / s;
+        const maxTX = SW / 2 * (1 - 1 / s);
+        const maxTY = _iAreaH.current / 2 * (1 - 1 / s);
+        inspectTransX.setValue(Math.max(-maxTX, Math.min(maxTX, rawTX)));
+        inspectTransY.setValue(Math.max(-maxTY, Math.min(maxTY, rawTY)));
       }
 
       _iNumTouches.current = t.length;
@@ -723,6 +734,7 @@ export default function GameplayScreen() {
 
         <View
           style={{ flex: 1, overflow: 'hidden' }}
+          onLayout={e => { const h = e.nativeEvent.layout.height; if (h > 0) _iAreaH.current = h; }}
           {...inspectPanResponder.panHandlers}
         >
           {/* Two always-mounted images — source never changes, so no flash when
