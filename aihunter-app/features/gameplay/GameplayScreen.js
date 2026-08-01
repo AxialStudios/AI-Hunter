@@ -711,11 +711,9 @@ export default function GameplayScreen() {
           />
         </View>
 
-        <View style={styles.modalFooter}>
-          <View style={styles.modalDescriptionArea}>
-            <Text style={styles.modalDescription}>{zoomTellRef.current?.description}</Text>
-          </View>
-          <TouchableOpacity style={[styles.modalDoneBtn, { marginBottom: insets.bottom + 24 }]} onPress={() => { light(); setZoomTell(null); }}>
+        <View style={[styles.modalFooter, { paddingBottom: insets.bottom + 72 }]}>
+          <Text style={styles.modalDescription}>{zoomTellRef.current?.description}</Text>
+          <TouchableOpacity style={styles.modalDoneBtn} onPress={() => { light(); setZoomTell(null); }}>
             <Text style={styles.modalDoneText}>Done</Text>
           </TouchableOpacity>
         </View>
@@ -871,9 +869,8 @@ const styles = StyleSheet.create({
   modalTitle:       { flex: 1, fontSize: 17, fontFamily: fonts.bold, color: colors.textPrimary, textAlign: 'center' },
   modalImageArea:   { width: SW, height: MODAL_IMG_H, overflow: 'hidden', alignSelf: 'center' },
   modalImage:       { width: SW, height: MODAL_IMG_H },
-  modalFooter:         { flex: 1, alignItems: 'center' },
-  modalDescriptionArea:{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32 },
-  modalDescription:    { fontSize: 18, fontFamily: fonts.regular, color: colors.textPrimary, lineHeight: 27, textAlign: 'center' },
+  modalFooter:      { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32, gap: 20 },
+  modalDescription: { fontSize: 18, fontFamily: fonts.regular, color: colors.textPrimary, lineHeight: 27, textAlign: 'center' },
   modalDoneBtn:     { backgroundColor: colors.surface, paddingVertical: 14, paddingHorizontal: 40, borderRadius: radius.pill },
   modalDoneText:    { fontSize: 15, fontFamily: fonts.semiBold, color: colors.textPrimary },
 });
