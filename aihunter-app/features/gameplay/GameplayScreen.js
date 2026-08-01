@@ -135,6 +135,9 @@ export default function GameplayScreen() {
       } else {
         Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
       }
+    } else if (loadCount.current > 2) {
+      // Extra onLoadEnd fires (e.g. source prop update) — just ensure image is visible.
+      fadeAnim.setValue(1);
     }
   }
 
