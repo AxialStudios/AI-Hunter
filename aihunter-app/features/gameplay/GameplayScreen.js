@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import {
-  View, Text, Image, Animated, TouchableOpacity,
+  View, Text, Image, Animated, Easing, TouchableOpacity,
   ScrollView, StyleSheet, Dimensions, ActivityIndicator, PanResponder,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -394,8 +394,8 @@ export default function GameplayScreen() {
     const tells = task.tell_annotations || [];
     const loops = shimmerAnims.slice(0, tells.length).map(v =>
       Animated.loop(Animated.sequence([
-        Animated.timing(v, { toValue: 1,   duration: 950, useNativeDriver: true }),
-        Animated.timing(v, { toValue: 0.2, duration: 950, useNativeDriver: true }),
+        Animated.timing(v, { toValue: 1, duration: 1100, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(v, { toValue: 0, duration: 1100, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       ]))
     );
     const timers = loops.map((l, i) => setTimeout(() => l.start(), i * 320));
@@ -624,8 +624,8 @@ export default function GameplayScreen() {
                         const r  = Math.max(26, (tell.radius ?? 0.09) * aiLayout.width);
                         const cx = tell.x * aiNaturalSize.width  * scale - offsetX;
                         const cy = tell.y * aiNaturalSize.height * scale - offsetY;
-                        const opacity      = shimmerAnims[i].interpolate({ inputRange: [0, 1], outputRange: [0.3, 0.9] });
-                        const shimmerScale = shimmerAnims[i].interpolate({ inputRange: [0, 1], outputRange: [0.88, 1.10] });
+                        const opacity      = shimmerAnims[i].interpolate({ inputRange: [0, 1], outputRange: [0.45, 1.0] });
+                        const shimmerScale = shimmerAnims[i].interpolate({ inputRange: [0, 1], outputRange: [0.93, 1.07] });
                         return (
                           <TouchableOpacity
                             key={i}
