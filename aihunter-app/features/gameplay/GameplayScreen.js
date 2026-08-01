@@ -41,7 +41,8 @@ export default function GameplayScreen() {
   const zoomTellRef   = useRef(null);
   const [selectedSide, setSelectedSide] = useState(null); // 'left' | 'right' — pre-confirm pick
   const [inspectSide,  setInspectSide]  = useState(null); // 'left' | 'right' — full-screen zoom
-  const [aiLayout,      setAiLayout]      = useState({ width: 0, height: 0 });
+  const [aiLayout,        setAiLayout]        = useState({ width: 0, height: 0 });
+  const [inspectScrollH,  setInspectScrollH]  = useState(0);
   const [aiNaturalSize, setAiNaturalSize] = useState({ width: 0, height: 0 });
   const [nextTask,      setNextTask]      = useState(null);
   const nextLeftIsReal  = useRef(false);
@@ -574,15 +575,19 @@ export default function GameplayScreen() {
         </View>
       </View>
 
-      {/* ── INSPECT OVERLAYS ─ outer View always mounted (no bg flash on open).
-           ScrollView is conditionally mounted: unmounts on close so iOS creates
-           a fresh UIScrollView on every open — zoom/pan always resets cleanly.
-           Bare Image rendered when inactive keeps the GPU texture warm so there
-           is no image flash when the overlay opens again. ── */}
+      {/* ── INSPECT OVERLAYS ──────────────────────────────────────────────────
+           Layout: outer View always mounted (no bg flash). Inside the flex:1
+           area, an always-mounted Image fills it absolutely — this keeps the
+           GPU texture decoded at the exact inspect-area dimensions so the
+           ScrollView Image loads from cache with no black-screen delay.
+           The ScrollView is conditionally mounted on top: unmounting it on
+           close means iOS creates a fresh UIScrollView every open, so zoom
+           and pan are always reset with no imperative native calls needed.
+           inspectScrollH (set via onLayout) gives the ScrollView the correct
+           explicit height so iOS knows the scroll content size for zoom. ── */}
       {(['left', 'right']).map(side => {
         const isActive = inspectSide === side;
         const url      = side === 'left' ? leftUrl : rightUrl;
-        const imgH     = SH - insets.top - 56 - insets.bottom - 72;
         return (
           <View
             key={side}
@@ -597,31 +602,40 @@ export default function GameplayScreen() {
               <View style={{ width: 44 }} />
             </View>
 
-            {isActive ? (
-              <ScrollView
-                style={{ flex: 1 }}
-                minimumZoomScale={1}
-                maximumZoomScale={4}
-                bouncesZoom
-                centerContent
-                showsHorizontalScrollIndicator={false}
-                showsVerticalScrollIndicator={false}
-              >
-                <Image
-                  source={{ uri: url }}
-                  style={{ width: SW, height: imgH }}
-                  resizeMode="contain"
-                />
-              </ScrollView>
-            ) : (
-              // No ScrollView when closed — keeps GPU texture warm without
-              // accumulating any zoom/pan state that would need resetting.
+            <View
+              style={{ flex: 1 }}
+              onLayout={e => {
+                const h = e.nativeEvent.layout.height;
+                if (h > 0) setInspectScrollH(h);
+              }}
+            >
+              {/* Always-mounted: decoded at exact inspect dimensions so the
+                  ScrollView Image below is an instant SDWebImage cache hit */}
               <Image
                 source={{ uri: url }}
-                style={{ width: SW, height: imgH }}
+                style={StyleSheet.absoluteFillObject}
                 resizeMode="contain"
               />
-            )}
+
+              {/* Conditionally-mounted: fresh UIScrollView = clean zoom every open */}
+              {isActive && inspectScrollH > 0 && (
+                <ScrollView
+                  style={StyleSheet.absoluteFillObject}
+                  minimumZoomScale={1}
+                  maximumZoomScale={4}
+                  bouncesZoom
+                  centerContent
+                  showsHorizontalScrollIndicator={false}
+                  showsVerticalScrollIndicator={false}
+                >
+                  <Image
+                    source={{ uri: url }}
+                    style={{ width: SW, height: inspectScrollH }}
+                    resizeMode="contain"
+                  />
+                </ScrollView>
+              )}
+            </View>
 
             <View style={[styles.inspectFooter, { paddingBottom: insets.bottom + 16 }]}>
               <TouchableOpacity style={styles.modalDoneBtn} onPress={closeInspect}>
