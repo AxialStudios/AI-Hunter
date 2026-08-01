@@ -313,13 +313,24 @@ export default function GameplayScreen() {
     }, 50);
   }
 
-  function closeInspect() {
+  function openInspect(side) {
+    // Reset transforms while the overlay is still invisible (opacity:0.001).
+    // Resetting here (not on close) means the overlay hides without any
+    // transform snap — closing is just an opacity change, nothing moves.
     inspectScale.setValue(1);
     inspectTransX.setValue(0);
     inspectTransY.setValue(0);
-    _iBaseScale.current = 1;
-    _iBaseTX.current    = 0;
-    _iBaseTY.current    = 0;
+    _iBaseScale.current  = 1;
+    _iBaseTX.current     = 0;
+    _iBaseTY.current     = 0;
+    _iNumTouches.current = 0;
+    setInspectSide(side);
+  }
+
+  function closeInspect() {
+    // Just hide the overlay. Transforms stay wherever they are — the overlay
+    // is invisible at opacity:0.001, so no snap/squish flash on close.
+    // openInspect() resets them on the next open before anything is visible.
     _iNumTouches.current = 0;
     setInspectSide(null);
   }
@@ -440,7 +451,7 @@ export default function GameplayScreen() {
                 {selectedSide === 'left' && (
                   <TouchableOpacity
                     style={styles.zoomIconBtn}
-                    onPress={() => { light(); setInspectSide('left'); }}
+                    onPress={() => { light(); openInspect('left'); }}
                   >
                     <Feather name="maximize-2" size={13} color="#fff" />
                   </TouchableOpacity>
@@ -468,7 +479,7 @@ export default function GameplayScreen() {
                 {selectedSide === 'right' && (
                   <TouchableOpacity
                     style={styles.zoomIconBtn}
-                    onPress={() => { light(); setInspectSide('right'); }}
+                    onPress={() => { light(); openInspect('right'); }}
                   >
                     <Feather name="maximize-2" size={13} color="#fff" />
                   </TouchableOpacity>
