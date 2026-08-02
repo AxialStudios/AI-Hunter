@@ -239,7 +239,7 @@ function Beat0({ onFlash, onNext }) {
             >
               <Image
                 source={BEAT0_IMAGES[label]}
-                style={StyleSheet.absoluteFillObject}
+                style={styles.beat0Image}
                 resizeMode="cover"
               />
               {stage >= 2 && (
@@ -608,7 +608,8 @@ const styles = StyleSheet.create({
   imageRow:                 { flexDirection: 'row', gap: 12, justifyContent: 'center' },
   imagePlaceholder:         { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1.5, borderColor: colors.border, overflow: 'hidden' },
   imagePlaceholderRevealed: { borderColor: colors.incorrect },
-  beat0Overlay:             { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 14 },
+  beat0Image:               { width: '100%', height: '100%' },
+  beat0Overlay:             { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 14 },
   beat0OverlayText:         { fontSize: 13, fontFamily: fonts.semiBold, color: colors.incorrect, letterSpacing: 0.5 },
 
   timelineScroll:  { flexGrow: 0, marginVertical: 16 },
