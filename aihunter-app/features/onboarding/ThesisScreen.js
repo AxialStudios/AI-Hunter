@@ -14,8 +14,8 @@ const CARD_W       = 210;
 const CARD_GAP     = 12;
 
 const BEAT0_IMAGES = {
-  A: require('../../assets/onboarding/beat0_A.jpg'),
-  B: require('../../assets/onboarding/beat0_B.jpg'),
+  A: { src: require('../../assets/onboarding/beat0_A.jpg'), resize: 'cover'   },
+  B: { src: require('../../assets/onboarding/beat0_B.jpg'), resize: 'contain' },
 };
 
 const TIMELINE_IMAGES = {
@@ -238,9 +238,9 @@ function Beat0({ onFlash, onNext }) {
               ]}
             >
               <Image
-                source={BEAT0_IMAGES[label]}
+                source={BEAT0_IMAGES[label].src}
                 style={styles.beat0Image}
-                resizeMode="cover"
+                resizeMode={BEAT0_IMAGES[label].resize}
               />
               {stage >= 2 && (
                 <Animated.View style={[styles.beat0Overlay, { opacity: subAlpha }]}>
