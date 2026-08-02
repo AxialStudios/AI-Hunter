@@ -13,6 +13,11 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 const CARD_W       = 210;
 const CARD_GAP     = 12;
 
+const BEAT0_IMAGES = {
+  A: require('../../assets/onboarding/beat0_A.jpg'),
+  B: require('../../assets/onboarding/beat0_B.jpg'),
+};
+
 const TIMELINE_IMAGES = {
   '2021': require('../../assets/onboarding/timeline_2021.png'),
   '2022': require('../../assets/onboarding/timeline_2022.jpg'),
@@ -232,21 +237,16 @@ function Beat0({ onFlash, onNext }) {
                 stage >= 2 && styles.imagePlaceholderRevealed,
               ]}
             >
-              {/* PLACEHOLDER — swap in matching real+AI image pair before launch */}
-              <Feather
-                name="image"
-                size={28}
-                color={stage >= 2 ? colors.incorrect : colors.textTertiary}
+              <Image
+                source={BEAT0_IMAGES[label]}
+                style={StyleSheet.absoluteFillObject}
+                resizeMode="cover"
               />
-              <Animated.Text
-                style={[
-                  styles.placeholderLabel,
-                  stage >= 2 && styles.placeholderLabelRevealed,
-                  { opacity: stage >= 2 ? subAlpha : promptAlpha },
-                ]}
-              >
-                {stage >= 2 ? 'AI generated' : `Image ${label}`}
-              </Animated.Text>
+              {stage >= 2 && (
+                <Animated.View style={[styles.beat0Overlay, { opacity: subAlpha }]}>
+                  <Text style={styles.beat0OverlayText}>AI generated</Text>
+                </Animated.View>
+              )}
             </TouchableOpacity>
           ))}
         </View>
@@ -606,10 +606,10 @@ const styles = StyleSheet.create({
   subSpaced:  { fontSize: 20, fontFamily: fonts.regular, color: colors.textPrimary, lineHeight: 28, textAlign: 'center', marginTop: 20 },
 
   imageRow:                 { flexDirection: 'row', gap: 12, justifyContent: 'center' },
-  imagePlaceholder:         { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1.5, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', gap: 10 },
-  imagePlaceholderRevealed: { borderColor: colors.incorrect, backgroundColor: '#1a0808' },
-  placeholderLabel:         { fontSize: 13, fontFamily: fonts.medium, color: colors.textTertiary },
-  placeholderLabelRevealed: { color: colors.incorrect },
+  imagePlaceholder:         { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1.5, borderColor: colors.border, overflow: 'hidden' },
+  imagePlaceholderRevealed: { borderColor: colors.incorrect },
+  beat0Overlay:             { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 14 },
+  beat0OverlayText:         { fontSize: 13, fontFamily: fonts.semiBold, color: colors.incorrect, letterSpacing: 0.5 },
 
   timelineScroll:  { flexGrow: 0, marginVertical: 16 },
   timelineContent: { paddingHorizontal: 24, gap: CARD_GAP },
