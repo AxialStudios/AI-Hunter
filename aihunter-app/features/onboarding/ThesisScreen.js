@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, Animated, Dimensions, Easing,
+  StyleSheet, Animated, Dimensions, Easing, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -13,10 +13,20 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 const CARD_W       = 190;
 const CARD_GAP     = 12;
 
+const TIMELINE_IMAGES = {
+  '2021': require('../../assets/onboarding/timeline_2021.png'),
+  '2022': require('../../assets/onboarding/timeline_2022.jpg'),
+  '2023': require('../../assets/onboarding/timeline_2023.jpg'),
+  '2024': require('../../assets/onboarding/timeline_2024.jpg'),
+  '2025': require('../../assets/onboarding/timeline_2025.jpg'),
+  '2026': require('../../assets/onboarding/timeline_2026.jpg'),
+};
+
 const YEARS = [
-  { year: '2022', sub: "You'd know instantly"   },
-  { year: '2023', sub: 'Something felt off'     },
-  { year: '2024', sub: 'Hard to be sure'        },
+  { year: '2021', sub: "You'd know instantly"   },
+  { year: '2022', sub: 'Something felt off'     },
+  { year: '2023', sub: 'Hard to be sure'        },
+  { year: '2024', sub: 'Getting harder'         },
   { year: '2025', sub: 'Most people missed it'  },
   { year: '2026', sub: 'Almost no one can tell' },
   { year: '2027', sub: 'What comes next?', isQuestion: true },
@@ -333,10 +343,13 @@ function Beat1({ onNext }) {
             ]}
           >
             <View style={[styles.yearBox, isQuestion && styles.yearBoxQuestion]}>
-              {/* PLACEHOLDER — swap in era-representative AI images before launch */}
               {isQuestion
                 ? <Text style={styles.questionMark}>?</Text>
-                : <Feather name="image" size={30} color={colors.textTertiary} />
+                : <Image
+                    source={TIMELINE_IMAGES[year]}
+                    style={styles.yearBoxImage}
+                    resizeMode="cover"
+                  />
               }
             </View>
             <Text style={[styles.yearLabel, isQuestion && styles.yearLabelDim]}>{year}</Text>
@@ -601,8 +614,9 @@ const styles = StyleSheet.create({
   timelineScroll:  { flexGrow: 0, marginVertical: 16 },
   timelineContent: { paddingHorizontal: 24, gap: CARD_GAP },
   yearCard:        { alignItems: 'center', gap: 8, width: CARD_W },
-  yearBox:         { width: CARD_W, height: 260, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1.5, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  yearBox:         { width: CARD_W, height: 260, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1.5, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   yearBoxQuestion: { borderColor: colors.textTertiary },
+  yearBoxImage:    { width: '100%', height: '100%' },
   questionMark:    { fontSize: 52, color: colors.textSecondary },
   yearLabel:       { fontSize: 22, fontFamily: fonts.bold, color: colors.textPrimary },
   yearLabelDim:    { color: colors.textSecondary },
