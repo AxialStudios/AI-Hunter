@@ -10,7 +10,7 @@ import { useHaptics } from '../../context/HapticsContext';
 import { colors, fonts, radius } from '../../constants/theme';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const CARD_W       = 190;
+const CARD_W       = 210;
 const CARD_GAP     = 12;
 
 const TIMELINE_IMAGES = {
@@ -314,7 +314,7 @@ function Beat1({ onNext }) {
             });
           }, 1400);
         }
-      }, BASE_DELAY + i * 900);
+      }, BASE_DELAY + i * 1150);
     });
   }, []);
 
@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
   timelineScroll:  { flexGrow: 0, marginVertical: 16 },
   timelineContent: { paddingHorizontal: 24, gap: CARD_GAP },
   yearCard:        { alignItems: 'center', gap: 8, width: CARD_W },
-  yearBox:         { width: CARD_W, height: 260, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1.5, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  yearBox:         { width: CARD_W, height: 284, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1.5, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   yearBoxQuestion: { borderColor: colors.textTertiary },
   yearBoxImage:    { width: '100%', height: '100%' },
   questionMark:    { fontSize: 52, color: colors.textSecondary },
@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
 
   pulseCircle:       { width: 64, height: 64, borderRadius: 32, borderWidth: 1.5, borderColor: colors.textPrimary, alignItems: 'center', justifyContent: 'center' },
   pulseCircleDanger: { borderColor: colors.incorrect },
-  circleBottom: { alignItems: 'center', marginBottom: 36 },
+  circleBottom: { alignItems: 'center', marginBottom: 8 },
   circleWrap:   { marginTop: 52, alignItems: 'center', height: 64 },
   circleSpacer: { height: 64 },
 
