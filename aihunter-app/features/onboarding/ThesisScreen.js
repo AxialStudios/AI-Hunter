@@ -37,8 +37,9 @@ const YEARS = [
   { year: '2027', sub: 'What comes next?', isQuestion: true },
 ];
 
-function easeInOutCubic(t) {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+// Rushes through early values, then decelerates dramatically near the target
+function easeOutExpo(t) {
+  return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
 }
 
 async function markSeen() {
@@ -388,8 +389,6 @@ function Beat2({ onNext }) {
   const scaleAnim   = useRef(new Animated.Value(0.78)).current;
   const alphaAnim   = useRef(new Animated.Value(0)).current;
   const circleAlpha = useRef(new Animated.Value(0)).current;
-  const hapticTimer = useRef(null);
-  const impactTimer = useRef(null);
 
   // Phase 0 exit
   const phase0Y     = useRef(new Animated.Value(0)).current;
@@ -404,62 +403,69 @@ function Beat2({ onNext }) {
       Animated.timing(scaleAnim, { toValue: 1, duration: 420, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       Animated.timing(alphaAnim, { toValue: 1, duration: 420, easing: Easing.out(Easing.ease),  useNativeDriver: true }),
     ]).start(() => setTimeout(startStatCountUp, 250));
-    return () => {
-      clearInterval(hapticTimer.current);
-      clearInterval(impactTimer.current);
-    };
+    return () => {};
   }, []);
 
   function startStatCountUp() {
-    const duration  = 1600;
+    const duration  = 2800;
     const startTime = Date.now();
-    hapticTimer.current = setInterval(() => medium(), 90);
+    let lastVal = -1;
 
     const tick = () => {
       const elapsed  = Date.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      setStatNum(Math.round(easeInOutCubic(progress) * STAT_TARGET));
+      const val = Math.round(easeOutExpo(progress) * STAT_TARGET);
+
+      if (val !== lastVal) {
+        lastVal = val;
+        setStatNum(val);
+        if (progress < 1) medium();
+      }
 
       if (progress < 1) {
         requestAnimationFrame(tick);
       } else {
-        clearInterval(hapticTimer.current);
         setStatNum(STAT_TARGET);
         heavy();
         setTimeout(() => {
           Animated.timing(circleAlpha, {
             toValue: 1, duration: 360, easing: Easing.out(Easing.ease), useNativeDriver: true,
           }).start();
-        }, 600);
+        }, 800);
       }
     };
     requestAnimationFrame(tick);
   }
 
   function startImpactCountUp(targetPhase) {
-    const cfg      = PHASE_CONFIG[targetPhase];
-    const duration = 1000;
+    const cfg       = PHASE_CONFIG[targetPhase];
+    const duration  = 1800;
     const startTime = Date.now();
     setImpactVal(0);
-    impactTimer.current = setInterval(() => light(), 65);
+    let lastDisplayed = null;
 
     const tick = () => {
       const elapsed  = Date.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      const val = easeInOutCubic(progress) * cfg.target;
-      setImpactVal(cfg.isDecimal ? val : Math.round(val));
+      const raw = easeOutExpo(progress) * cfg.target;
+      const display = cfg.isDecimal ? parseFloat(raw.toFixed(2)) : Math.round(raw);
+
+      if (display !== lastDisplayed) {
+        lastDisplayed = display;
+        setImpactVal(display);
+        if (progress < 1) light();
+      }
 
       if (progress < 1) {
         requestAnimationFrame(tick);
       } else {
-        clearInterval(impactTimer.current);
         setImpactVal(cfg.target);
         heavy();
         setTimeout(() => {
           Animated.timing(circleAlpha, {
             toValue: 1, duration: 360, easing: Easing.out(Easing.ease), useNativeDriver: true,
           }).start();
-        }, 600);
+        }, 800);
       }
     };
     requestAnimationFrame(tick);
@@ -467,7 +473,6 @@ function Beat2({ onNext }) {
 
   function advancePhase() {
     medium();
-    clearInterval(impactTimer.current);
     const isLast = phase === 3;
 
     Animated.timing(circleAlpha, {
