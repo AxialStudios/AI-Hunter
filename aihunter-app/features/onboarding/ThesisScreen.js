@@ -15,7 +15,7 @@ const CARD_GAP     = 12;
 
 const BEAT0_IMAGES = {
   A: { src: require('../../assets/onboarding/beat0_A.jpg'), resize: 'cover'   },
-  B: { src: require('../../assets/onboarding/beat0_B.jpg'), resize: 'contain' },
+  B: { src: require('../../assets/onboarding/beat0_B.jpg'), resize: 'cover'   },
 };
 
 const TIMELINE_IMAGES = {
