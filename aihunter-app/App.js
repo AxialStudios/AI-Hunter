@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { NavigationContainer, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -8,9 +9,11 @@ import {
   SpaceGrotesk_600SemiBold,
   SpaceGrotesk_700Bold,
 } from '@expo-google-fonts/space-grotesk';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemeProvider } from './context/ThemeContext';
 import { HapticsProvider } from './context/HapticsContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import ThesisScreen from './features/onboarding/ThesisScreen';
 import OnboardingScreen from './features/onboarding/OnboardingScreen';
 import GameplayScreen from './features/gameplay/GameplayScreen';
 
@@ -28,8 +31,18 @@ const NavTheme = {
 
 function AppNavigator() {
   const { loading } = useAuth();
+  const [initialRoute, setInitialRoute] = useState(null);
 
-  if (loading) {
+  useEffect(() => {
+    // DEV RESET — remove this line before shipping
+    AsyncStorage.removeItem('hasSeenThesis').then(() =>
+      AsyncStorage.getItem('hasSeenThesis').then(val => {
+        setInitialRoute(val ? 'Onboarding' : 'Thesis');
+      })
+    );
+  }, []);
+
+  if (loading || !initialRoute) {
     return (
       <View style={{ flex: 1, backgroundColor: '#0F0F0F', alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator color="#fff" />
@@ -40,11 +53,12 @@ function AppNavigator() {
   return (
     <NavigationContainer theme={NavTheme}>
       <Stack.Navigator
-        initialRouteName="Onboarding"
+        initialRouteName={initialRoute}
         screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0F0F0F' } }}
       >
+        <Stack.Screen name="Thesis"     component={ThesisScreen} />
         <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-        <Stack.Screen name="Gameplay" component={GameplayScreen} />
+        <Stack.Screen name="Gameplay"   component={GameplayScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
