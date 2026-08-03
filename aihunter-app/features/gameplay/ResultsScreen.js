@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import {
-  View, Text, Image, Animated, TouchableOpacity, Modal,
-  ScrollView, StyleSheet, Dimensions,
+  View, Text, Image, Animated, TouchableOpacity,
+  PanResponder, ScrollView, StyleSheet, Dimensions,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,13 +10,14 @@ import { supabase } from '../../lib/supabase';
 import { prefetchNextTask } from '../../lib/taskCache';
 import { colors, fonts, radius } from '../../constants/theme';
 
-const { width: SW } = Dimensions.get('window');
+const { width: SW, height: SH } = Dimensions.get('window');
 const CARD_W = Math.floor((SW - 32 - 10) / 2);
 const CARD_H = Math.floor(CARD_W / 0.5);
 
 // Zoom modal constants
-const MODAL_ZOOM  = 2.5;
-const MODAL_IMG_H = Math.floor(SW / 0.9); // aiImage aspect ratio
+const MODAL_ZOOM     = 2.5;
+const TELL_MAX_ZOOM  = 7;
+const MODAL_IMG_H    = Math.floor(SW / 0.9); // aiImage aspect ratio
 
 const CORRECT_FILL   = 'rgba(34,197,94,0.72)';
 const INCORRECT_FILL = 'rgba(239,68,68,0.72)';
@@ -43,6 +44,118 @@ export default function ResultsScreen({ route, navigation }) {
   const rightAnim     = useRef(new Animated.Value(0)).current;
   const imageFadeAnim = useRef(new Animated.Value(0)).current;
   const loadCount     = useRef(0);
+
+  const zoomTellRef   = useRef(null);
+  const zoomScale     = useRef(new Animated.Value(1)).current;
+  const zoomTransX    = useRef(new Animated.Value(0)).current;
+  const zoomTransY    = useRef(new Animated.Value(0)).current;
+  const _zBaseScale   = useRef(1);
+  const _zBaseTX      = useRef(0);
+  const _zBaseTY      = useRef(0);
+  const _zPinchDist   = useRef(1);
+  const _zPinchBaseSc = useRef(1);
+  const _zPanStartX   = useRef(0);
+  const _zPanStartY   = useRef(0);
+  const _zNumTouches  = useRef(0);
+  const _zAreaH       = useRef(SH);
+
+  const zoomPanResponder = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder:  () => true,
+
+    onPanResponderGrant: (e) => {
+      zoomScale.stopAnimation();
+      zoomTransX.stopAnimation();
+      zoomTransY.stopAnimation();
+      _zBaseScale.current = zoomScale.__getValue();
+      _zBaseTX.current    = zoomTransX.__getValue();
+      _zBaseTY.current    = zoomTransY.__getValue();
+      const t = e.nativeEvent.touches;
+      _zNumTouches.current = t.length;
+      if (t.length >= 2) {
+        const dx = t[0].pageX - t[1].pageX;
+        const dy = t[0].pageY - t[1].pageY;
+        _zPinchDist.current   = Math.sqrt(dx * dx + dy * dy) || 1;
+        _zPinchBaseSc.current = _zBaseScale.current;
+        _zPanStartX.current   = (t[0].pageX + t[1].pageX) / 2;
+        _zPanStartY.current   = (t[0].pageY + t[1].pageY) / 2;
+      } else {
+        _zPanStartX.current = t[0].pageX;
+        _zPanStartY.current = t[0].pageY;
+      }
+    },
+
+    onPanResponderMove: (e) => {
+      const t = e.nativeEvent.touches;
+      if (t.length >= 2) {
+        if (_zNumTouches.current !== t.length) {
+          const dx = t[0].pageX - t[1].pageX;
+          const dy = t[0].pageY - t[1].pageY;
+          _zPinchDist.current   = Math.sqrt(dx * dx + dy * dy) || 1;
+          const cur             = zoomScale.__getValue();
+          _zPinchBaseSc.current = cur;
+          _zBaseScale.current   = cur;
+          _zBaseTX.current      = zoomTransX.__getValue();
+          _zBaseTY.current      = zoomTransY.__getValue();
+          _zPanStartX.current   = (t[0].pageX + t[1].pageX) / 2;
+          _zPanStartY.current   = (t[0].pageY + t[1].pageY) / 2;
+          _zNumTouches.current  = t.length;
+          return;
+        }
+        const dx   = t[0].pageX - t[1].pageX;
+        const dy   = t[0].pageY - t[1].pageY;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const newS = Math.max(1, Math.min(TELL_MAX_ZOOM, _zPinchBaseSc.current * (dist / _zPinchDist.current)));
+        zoomScale.setValue(newS);
+        const midX  = (t[0].pageX + t[1].pageX) / 2;
+        const midY  = (t[0].pageY + t[1].pageY) / 2;
+        const rawTX = (_zBaseTX.current * _zPinchBaseSc.current + midX - _zPanStartX.current) / newS;
+        const rawTY = (_zBaseTY.current * _zPinchBaseSc.current + midY - _zPanStartY.current) / newS;
+        const maxTX = SW / 2 * (1 - 1 / newS);
+        const maxTY = _zAreaH.current / 2 * (1 - 1 / newS);
+        zoomTransX.setValue(Math.max(-maxTX, Math.min(maxTX, rawTX)));
+        zoomTransY.setValue(Math.max(-maxTY, Math.min(maxTY, rawTY)));
+      } else if (t.length === 1) {
+        if (_zNumTouches.current !== 1) {
+          const cur            = zoomScale.__getValue();
+          _zBaseScale.current  = cur;
+          _zBaseTX.current     = zoomTransX.__getValue();
+          _zBaseTY.current     = zoomTransY.__getValue();
+          _zPanStartX.current  = t[0].pageX;
+          _zPanStartY.current  = t[0].pageY;
+          _zNumTouches.current = 1;
+          return;
+        }
+        const s     = _zBaseScale.current;
+        const rawTX = _zBaseTX.current + (t[0].pageX - _zPanStartX.current) / s;
+        const rawTY = _zBaseTY.current + (t[0].pageY - _zPanStartY.current) / s;
+        const maxTX = SW / 2 * (1 - 1 / s);
+        const maxTY = _zAreaH.current / 2 * (1 - 1 / s);
+        zoomTransX.setValue(Math.max(-maxTX, Math.min(maxTX, rawTX)));
+        zoomTransY.setValue(Math.max(-maxTY, Math.min(maxTY, rawTY)));
+      }
+      _zNumTouches.current = t.length;
+    },
+
+    onPanResponderRelease: () => {
+      _zBaseScale.current  = zoomScale.__getValue();
+      _zBaseTX.current     = zoomTransX.__getValue();
+      _zBaseTY.current     = zoomTransY.__getValue();
+      _zNumTouches.current = 0;
+      if (_zBaseScale.current < 1.05) {
+        _zBaseScale.current = 1;
+        _zBaseTX.current    = 0;
+        _zBaseTY.current    = 0;
+        Animated.parallel([
+          Animated.spring(zoomScale,  { toValue: 1, useNativeDriver: false }),
+          Animated.spring(zoomTransX, { toValue: 0, useNativeDriver: false }),
+          Animated.spring(zoomTransY, { toValue: 0, useNativeDriver: false }),
+        ]).start();
+      }
+    },
+
+    onPanResponderTerminate: () => { _zNumTouches.current = 0; },
+  })).current;
 
   // One Animated.Value per annotation drives its shimmer
   const tells = task.tell_annotations || [];
@@ -91,7 +204,29 @@ export default function ResultsScreen({ route, navigation }) {
 
   function openZoom(tell) {
     light();
+    zoomTellRef.current = tell;
+    const maxTX = SW / 2 * (1 - 1 / MODAL_ZOOM);
+    const maxTY = _zAreaH.current / 2 * (1 - 1 / MODAL_ZOOM);
+    const initTX = Math.max(-maxTX, Math.min(maxTX, -(tell.x - 0.5) * SW));
+    const initTY = Math.max(-maxTY, Math.min(maxTY, -(tell.y - 0.5) * _zAreaH.current));
+    zoomScale.setValue(MODAL_ZOOM);
+    zoomTransX.setValue(initTX);
+    zoomTransY.setValue(initTY);
+    _zBaseScale.current = MODAL_ZOOM;
+    _zBaseTX.current    = initTX;
+    _zBaseTY.current    = initTY;
     setZoomTell(tell);
+  }
+
+  function closeZoom() {
+    light();
+    setZoomTell(null);
+    zoomScale.setValue(1);
+    zoomTransX.setValue(0);
+    zoomTransY.setValue(0);
+    _zBaseScale.current = 1;
+    _zBaseTX.current    = 0;
+    _zBaseTY.current    = 0;
   }
 
   return (
@@ -234,51 +369,48 @@ export default function ResultsScreen({ route, navigation }) {
         </ScrollView>
       </SafeAreaView>
 
-      {/* Annotation zoom modal */}
-      <Modal
-        visible={!!zoomTell}
-        animationType="fade"
-        statusBarTranslucent
-        onRequestClose={() => setZoomTell(null)}
+      {/* Tell zoom — same PanResponder overlay pattern as GameplayScreen inspect */}
+      <View
+        style={[StyleSheet.absoluteFillObject, { backgroundColor: '#000', opacity: zoomTell ? 1 : 0.001 }]}
+        pointerEvents={zoomTell ? 'auto' : 'none'}
       >
-        <View style={styles.modalContainer}>
-          {/* Header */}
-          <SafeAreaView>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => { light(); setZoomTell(null); }} style={styles.modalCloseBtn}>
-                <Feather name="x" size={22} color={colors.textPrimary} />
-              </TouchableOpacity>
-              <Text style={styles.modalTitle} numberOfLines={1}>{zoomTell?.label}</Text>
-              <View style={{ width: 44 }} />
-            </View>
-          </SafeAreaView>
+        <SafeAreaView style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={closeZoom} style={styles.modalCloseBtn}>
+              <Feather name="x" size={22} color={colors.textPrimary} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle} numberOfLines={1}>{zoomTellRef.current?.label ?? ''}</Text>
+            <View style={{ width: 44 }} />
+          </View>
+        </SafeAreaView>
 
-          {/* Zoomed image — transform centers the annotation on screen */}
-          {zoomTell && (
-            <View style={styles.modalImageArea}>
-              <Image
-                source={{ uri: task.ai_image_url }}
-                style={[styles.modalImage, {
-                  transform: [
-                    { translateX: -(zoomTell.x - 0.5) * SW * MODAL_ZOOM },
-                    { translateY: -(zoomTell.y - 0.5) * MODAL_IMG_H * MODAL_ZOOM },
-                    { scale: MODAL_ZOOM },
-                  ],
-                }]}
-                resizeMode="cover"
-              />
-            </View>
-          )}
+        <View
+          style={{ flex: 1, overflow: 'hidden' }}
+          onLayout={e => { const h = e.nativeEvent.layout.height; if (h > 0) _zAreaH.current = h; }}
+          {...zoomPanResponder.panHandlers}
+        >
+          <Animated.Image
+            source={{ uri: task.ai_image_url }}
+            style={[StyleSheet.absoluteFillObject, {
+              transform: [
+                { scale: zoomScale },
+                { translateX: zoomTransX },
+                { translateY: zoomTransY },
+              ],
+            }]}
+            resizeMode="cover"
+          />
+        </View>
 
-          {/* Description */}
-          <SafeAreaView style={styles.modalFooter}>
-            <Text style={styles.modalDescription}>{zoomTell?.description}</Text>
-            <TouchableOpacity style={styles.modalDoneBtn} onPress={() => { light(); setZoomTell(null); }}>
+        <SafeAreaView style={{ backgroundColor: 'rgba(0,0,0,0.65)' }}>
+          <View style={styles.modalFooter}>
+            <Text style={styles.modalDescription}>{zoomTellRef.current?.description ?? ''}</Text>
+            <TouchableOpacity style={styles.modalDoneBtn} onPress={closeZoom}>
               <Text style={styles.modalDoneText}>Done</Text>
             </TouchableOpacity>
-          </SafeAreaView>
-        </View>
-      </Modal>
+          </View>
+        </SafeAreaView>
+      </View>
     </>
   );
 }
@@ -335,16 +467,15 @@ const styles = StyleSheet.create({
   nextBtnText: { color: colors.bg, fontSize: 17, fontFamily: fonts.bold },
 
   // Zoom modal
-  modalContainer:  { flex: 1, backgroundColor: '#000' },
-  modalHeader:     { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 8, gap: 8 },
+  modalHeaderWrap: { position: 'absolute', top: 0, left: 0, right: 0 },
+  modalHeader:     { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 8, gap: 8, backgroundColor: 'rgba(0,0,0,0.55)' },
   modalCloseBtn:   { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   modalTitle:      { flex: 1, fontSize: 17, fontFamily: fonts.bold, color: colors.textPrimary, textAlign: 'center' },
 
-  // Image area clips the 2.5× transform to a clean viewport
-  modalImageArea:  { width: SW, height: MODAL_IMG_H, overflow: 'hidden', alignSelf: 'center' },
   modalImage:      { width: SW, height: MODAL_IMG_H },
 
-  modalFooter:     { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32, gap: 20 },
+  modalFooterWrap: { position: 'absolute', bottom: 0, left: 0, right: 0 },
+  modalFooter:     { paddingVertical: 20, alignItems: 'center', paddingHorizontal: 32, gap: 16, backgroundColor: 'rgba(0,0,0,0.65)' },
   modalDescription:{ fontSize: 15, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 23, textAlign: 'center' },
   modalDoneBtn:    { backgroundColor: colors.surface, paddingVertical: 14, paddingHorizontal: 40, borderRadius: radius.pill },
   modalDoneText:   { fontSize: 15, fontFamily: fonts.semiBold, color: colors.textPrimary },
