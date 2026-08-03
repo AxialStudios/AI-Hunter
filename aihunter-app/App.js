@@ -10,6 +10,7 @@ import {
   SpaceGrotesk_700Bold,
 } from '@expo-google-fonts/space-grotesk';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ThemeProvider } from './context/ThemeContext';
 import { HapticsProvider } from './context/HapticsContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -77,12 +78,14 @@ export default function App() {
   }
 
   return (
-    <ThemeProvider>
-      <HapticsProvider>
-        <AuthProvider>
-          <AppNavigator />
-        </AuthProvider>
-      </HapticsProvider>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <HapticsProvider>
+          <AuthProvider>
+            <AppNavigator />
+          </AuthProvider>
+        </HapticsProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

@@ -4,6 +4,7 @@ import {
   ScrollView, StyleSheet, Dimensions, ActivityIndicator, PanResponder,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase';
@@ -18,6 +19,8 @@ const CARD_H = Math.floor(CARD_W / 0.5);
 
 const MODAL_ZOOM  = 2.5;
 const MODAL_IMG_H = Math.floor(SW / 0.9);
+const TELL_MIN_ZOOM = 1;
+const TELL_MAX_ZOOM = 6;
 
 const CORRECT_FILL   = 'rgba(34,197,94,0.72)';
 const INCORRECT_FILL = 'rgba(239,68,68,0.72)';
@@ -173,6 +176,139 @@ export default function GameplayScreen() {
 
     onPanResponderTerminate: () => { _iNumTouches.current = 0; },
   })).current;
+
+  // ── Tell zoom: RNGH pinch + pan driving RN Animated values. ──
+  // Transform order is [translateX, translateY, scale] → the translation is applied
+  // AFTER the scale, i.e. in screen px, so a finger delta maps 1:1 with no
+  // division by scale (unlike the inspect overlay above, which scales first).
+  const tellScale = useRef(new Animated.Value(MODAL_ZOOM)).current;
+  const tellTX    = useRef(new Animated.Value(0)).current;
+  const tellTY    = useRef(new Animated.Value(0)).current;
+  const _tSavedScale = useRef(MODAL_ZOOM);
+  const _tSavedTX    = useRef(0);
+  const _tSavedTY    = useRef(0);
+  const _tFocus      = useRef({ s: MODAL_ZOOM, tx: 0, ty: 0 });
+
+  // Keep the frame covered: at scale s the image overhangs by (s-1)/2 per side.
+  // At s=1 this collapses to 0, forcing dead centre.
+  function clampTellPan(s, tx, ty) {
+    const maxX = Math.max(0, (s - 1) * SW / 2);
+    const maxY = Math.max(0, (s - 1) * MODAL_IMG_H / 2);
+    return {
+      tx: Math.max(-maxX, Math.min(maxX, tx)),
+      ty: Math.max(-maxY, Math.min(maxY, ty)),
+    };
+  }
+
+  // Framing that lands the tell dead centre at MODAL_ZOOM.
+  function tellFocus(tell) {
+    const fx = tell?.x ?? 0.5;
+    const fy = tell?.y ?? 0.5;
+    const { width: nw, height: nh } = aiNaturalSize;
+    if (nw > 0 && nh > 0) {
+      // natural fraction → display px inside the SW×MODAL_IMG_H cover-fit frame
+      const ms = Math.max(SW / nw, MODAL_IMG_H / nh);
+      const px = fx * nw * ms - (nw * ms - SW) / 2;
+      const py = fy * nh * ms - (nh * ms - MODAL_IMG_H) / 2;
+      return { s: MODAL_ZOOM, tx: -(px - SW / 2) * MODAL_ZOOM, ty: -(py - MODAL_IMG_H / 2) * MODAL_ZOOM };
+    }
+    // Fallback before natural size loads
+    return { s: MODAL_ZOOM, tx: -(fx - 0.5) * SW * MODAL_ZOOM, ty: -(fy - 0.5) * MODAL_IMG_H * MODAL_ZOOM };
+  }
+
+  function openTell(tell) {
+    light();
+    zoomTellRef.current = tell;
+    const f = tellFocus(tell);
+    const c = clampTellPan(f.s, f.tx, f.ty);
+    _tFocus.current      = { s: f.s, tx: c.tx, ty: c.ty };
+    _tSavedScale.current = f.s;
+    _tSavedTX.current    = c.tx;
+    _tSavedTY.current    = c.ty;
+    tellScale.setValue(f.s);
+    tellTX.setValue(c.tx);
+    tellTY.setValue(c.ty);
+    setZoomTell(tell);
+  }
+
+  // runOnJS(true) is required: these callbacks drive RN Animated, not Reanimated
+  // worklets. Reanimated 4 is installed but needs the New Architecture, which is
+  // off in app.json — so this path deliberately avoids it.
+  const tellGesture = useRef(
+    Gesture.Simultaneous(
+      Gesture.Pinch()
+        .runOnJS(true)
+        .onStart(() => {
+          tellScale.stopAnimation(); tellTX.stopAnimation(); tellTY.stopAnimation();
+          _tSavedScale.current = tellScale.__getValue();
+          _tSavedTX.current    = tellTX.__getValue();
+          _tSavedTY.current    = tellTY.__getValue();
+        })
+        .onUpdate(e => {
+          const s0 = _tSavedScale.current;
+          const s  = Math.max(TELL_MIN_ZOOM, Math.min(TELL_MAX_ZOOM, s0 * e.scale));
+          const k  = s / s0;
+          // Pin the point under the fingers: focal measured from frame centre.
+          // T1 = F - k*(F - T0)  keeps that point stationary across the scale change.
+          const fX = e.focalX - SW / 2;
+          const fY = e.focalY - MODAL_IMG_H / 2;
+          const c  = clampTellPan(s, fX - k * (fX - _tSavedTX.current), fY - k * (fY - _tSavedTY.current));
+          tellScale.setValue(s);
+          tellTX.setValue(c.tx);
+          tellTY.setValue(c.ty);
+        })
+        .onEnd(() => {
+          _tSavedScale.current = tellScale.__getValue();
+          _tSavedTX.current    = tellTX.__getValue();
+          _tSavedTY.current    = tellTY.__getValue();
+        }),
+
+      // maxPointers(1) keeps pan off during a pinch, so the focal math above owns
+      // two-finger drag and the two gestures never double-count translation.
+      Gesture.Pan()
+        .runOnJS(true)
+        .maxPointers(1)
+        .onStart(() => {
+          tellTX.stopAnimation(); tellTY.stopAnimation();
+          _tSavedTX.current = tellTX.__getValue();
+          _tSavedTY.current = tellTY.__getValue();
+        })
+        .onUpdate(e => {
+          const c = clampTellPan(
+            tellScale.__getValue(),
+            _tSavedTX.current + e.translationX,
+            _tSavedTY.current + e.translationY,
+          );
+          tellTX.setValue(c.tx);
+          tellTY.setValue(c.ty);
+        })
+        .onEnd(() => {
+          _tSavedTX.current = tellTX.__getValue();
+          _tSavedTY.current = tellTY.__getValue();
+        }),
+
+      // Double-tap toggles between the tell framing and the whole image.
+      Gesture.Tap()
+        .runOnJS(true)
+        .numberOfTaps(2)
+        .maxDuration(260)
+        .onEnd(() => {
+          const f        = _tFocus.current;
+          const zoomedIn = tellScale.__getValue() > (f.s + TELL_MIN_ZOOM) / 2;
+          const to       = zoomedIn ? { s: TELL_MIN_ZOOM, tx: 0, ty: 0 } : f;
+          const c        = clampTellPan(to.s, to.tx, to.ty);
+          _tSavedScale.current = to.s;
+          _tSavedTX.current    = c.tx;
+          _tSavedTY.current    = c.ty;
+          Animated.parallel([
+            Animated.spring(tellScale, { toValue: to.s,  useNativeDriver: false, bounciness: 0 }),
+            Animated.spring(tellTX,    { toValue: c.tx,  useNativeDriver: false, bounciness: 0 }),
+            Animated.spring(tellTY,    { toValue: c.ty,  useNativeDriver: false, bounciness: 0 }),
+          ]).start();
+        }),
+    )
+  ).current;
+
   const [nextTask,      setNextTask]      = useState(null);
   const nextLeftIsReal  = useRef(false);
 
@@ -672,7 +808,7 @@ export default function GameplayScreen() {
                           <TouchableOpacity
                             key={i}
                             style={[styles.highlight, { left: cx - r, top: cy - r, width: r * 2, height: r * 2, borderRadius: r }]}
-                            onPress={() => { light(); zoomTellRef.current = tell; setZoomTell(tell); }}
+                            onPress={() => openTell(tell)}
                             activeOpacity={0.75}
                           >
                             <Animated.View style={[styles.highlightFill, { borderRadius: r, opacity, transform: [{ scale: shimmerScale }] }]} />
@@ -688,7 +824,7 @@ export default function GameplayScreen() {
                       <TouchableOpacity
                         key={i}
                         style={styles.tellItem}
-                        onPress={() => tell.x != null && (light(), zoomTellRef.current = tell, setZoomTell(tell))}
+                        onPress={() => { if (tell.x != null) openTell(tell); }}
                         activeOpacity={tell.x != null ? 0.72 : 1}
                       >
                         <View style={styles.tellItemHeader}>
@@ -719,39 +855,23 @@ export default function GameplayScreen() {
           <View style={{ width: 44 }} />
         </View>
 
-        <View style={styles.modalImageArea}>
-          <Image
-            source={{ uri: task?.ai_image_url }}
-            style={[styles.modalImage, {
-              transform: (() => {
-                const tx = zoomTellRef.current?.x ?? 0.5;
-                const ty = zoomTellRef.current?.y ?? 0.5;
-                // Convert natural image fractions → display pixel position in
-                // the SW×MODAL_IMG_H container, then shift so that pixel lands
-                // at screen centre after the MODAL_ZOOM scale.
-                if (aiNaturalSize.width > 0) {
-                  const ms = Math.max(SW / aiNaturalSize.width, MODAL_IMG_H / aiNaturalSize.height);
-                  const ox = (aiNaturalSize.width  * ms - SW) / 2;
-                  const oy = (aiNaturalSize.height * ms - MODAL_IMG_H) / 2;
-                  const px = tx * aiNaturalSize.width  * ms - ox;
-                  const py = ty * aiNaturalSize.height * ms - oy;
-                  return [
-                    { translateX: -(px - SW / 2) * MODAL_ZOOM },
-                    { translateY: -(py - MODAL_IMG_H / 2) * MODAL_ZOOM },
-                    { scale: MODAL_ZOOM },
-                  ];
-                }
-                // Fallback before natural size loads
-                return [
-                  { translateX: -(tx - 0.5) * SW * MODAL_ZOOM },
-                  { translateY: -(ty - 0.5) * MODAL_IMG_H * MODAL_ZOOM },
-                  { scale: MODAL_ZOOM },
-                ];
-              })(),
-            }]}
-            resizeMode="cover"
-          />
-        </View>
+        {/* Pinch/pan/double-tap. openTell() seeds the transform on the tell before
+            this becomes visible, so it opens already framed on the highlight. */}
+        <GestureDetector gesture={tellGesture}>
+          <View style={styles.modalImageArea} collapsable={false}>
+            <Animated.Image
+              source={{ uri: task?.ai_image_url }}
+              style={[styles.modalImage, {
+                transform: [
+                  { translateX: tellTX },
+                  { translateY: tellTY },
+                  { scale: tellScale },
+                ],
+              }]}
+              resizeMode="cover"
+            />
+          </View>
+        </GestureDetector>
 
         <View style={[styles.modalFooter, { paddingBottom: insets.bottom + 72 }]}>
           <Text style={styles.modalDescription}>{zoomTellRef.current?.description}</Text>
