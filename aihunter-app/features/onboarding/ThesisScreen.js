@@ -426,7 +426,6 @@ function Beat2({ onNext }) {
         requestAnimationFrame(tick);
       } else {
         setStatNum(STAT_TARGET);
-        heavy();
         setTimeout(() => {
           Animated.timing(circleAlpha, {
             toValue: 1, duration: 360, easing: Easing.out(Easing.ease), useNativeDriver: true,
