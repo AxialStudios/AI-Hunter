@@ -184,10 +184,16 @@ export default function GameplayScreen() {
   const tellScale = useRef(new Animated.Value(MODAL_ZOOM)).current;
   const tellTX    = useRef(new Animated.Value(0)).current;
   const tellTY    = useRef(new Animated.Value(0)).current;
-  const _tSavedScale = useRef(MODAL_ZOOM);
-  const _tSavedTX    = useRef(0);
-  const _tSavedTY    = useRef(0);
-  const _tFocus      = useRef({ s: MODAL_ZOOM, tx: 0, ty: 0 });
+  const _tFocus = useRef({ s: MODAL_ZOOM, tx: 0, ty: 0 });
+  // Per-frame gesture deltas. Every update is applied relative to the PREVIOUS
+  // frame rather than to the gesture-start baseline, so a value that hits the
+  // pan clamp does not build up an invisible backlog that snaps back later.
+  const _tPrevPinch    = useRef(1);
+  const _tPrevFX       = useRef(0);
+  const _tPrevFY       = useRef(0);
+  const _tPrevPointers = useRef(0);
+  const _tPrevPanX     = useRef(0);
+  const _tPrevPanY     = useRef(0);
 
   // Keep the frame covered: at scale s the image overhangs by (s-1)/2 per side.
   // At s=1 this collapses to 0, forcing dead centre.
@@ -197,6 +203,17 @@ export default function GameplayScreen() {
     return {
       tx: Math.max(-maxX, Math.min(maxX, tx)),
       ty: Math.max(-maxY, Math.min(maxY, ty)),
+    };
+  }
+
+  // Focal point relative to frame centre, confined to the image frame.
+  // Sensitivity of the zoom-about-focal math scales with |focal|, so letting the
+  // focal wander onto the header/footer bars makes a tiny pinch swing the image
+  // wildly. Pinning it to the frame edge bounds that gain.
+  function tellFocalFromCentre(x, y) {
+    return {
+      fx: Math.max(0, Math.min(SW, x)) - SW / 2,
+      fy: Math.max(0, Math.min(MODAL_IMG_H, y)) - MODAL_IMG_H / 2,
     };
   }
 
@@ -221,10 +238,7 @@ export default function GameplayScreen() {
     zoomTellRef.current = tell;
     const f = tellFocus(tell);
     const c = clampTellPan(f.s, f.tx, f.ty);
-    _tFocus.current      = { s: f.s, tx: c.tx, ty: c.ty };
-    _tSavedScale.current = f.s;
-    _tSavedTX.current    = c.tx;
-    _tSavedTY.current    = c.ty;
+    _tFocus.current = { s: f.s, tx: c.tx, ty: c.ty };
     tellScale.setValue(f.s);
     tellTX.setValue(c.tx);
     tellTY.setValue(c.ty);
@@ -238,29 +252,45 @@ export default function GameplayScreen() {
     Gesture.Simultaneous(
       Gesture.Pinch()
         .runOnJS(true)
-        .onStart(() => {
+        .onStart(e => {
           tellScale.stopAnimation(); tellTX.stopAnimation(); tellTY.stopAnimation();
-          _tSavedScale.current = tellScale.__getValue();
-          _tSavedTX.current    = tellTX.__getValue();
-          _tSavedTY.current    = tellTY.__getValue();
+          const { fx, fy } = tellFocalFromCentre(e.focalX, e.focalY);
+          _tPrevPinch.current    = 1; // e.scale is 1 at gesture start
+          _tPrevFX.current       = fx;
+          _tPrevFY.current       = fy;
+          _tPrevPointers.current = e.numberOfPointers;
         })
         .onUpdate(e => {
-          const s0 = _tSavedScale.current;
-          const s  = Math.max(TELL_MIN_ZOOM, Math.min(TELL_MAX_ZOOM, s0 * e.scale));
-          const k  = s / s0;
-          // Pin the point under the fingers: focal measured from frame centre.
-          // T1 = F - k*(F - T0)  keeps that point stationary across the scale change.
-          const fX = e.focalX - SW / 2;
-          const fY = e.focalY - MODAL_IMG_H / 2;
-          const c  = clampTellPan(s, fX - k * (fX - _tSavedTX.current), fY - k * (fY - _tSavedTY.current));
-          tellScale.setValue(s);
+          const { fx, fy } = tellFocalFromCentre(e.focalX, e.focalY);
+          const curS  = tellScale.__getValue();
+          const curTX = tellTX.__getValue();
+          const curTY = tellTY.__getValue();
+
+          // Incremental scale factor since the last frame, guarded against the
+          // spike that e.scale produces when a finger lifts or lands.
+          let k = e.scale / (_tPrevPinch.current || 1);
+          if (!isFinite(k) || k <= 0) k = 1;
+          k = Math.max(0.8, Math.min(1.25, k));
+          const newS = Math.max(TELL_MIN_ZOOM, Math.min(TELL_MAX_ZOOM, curS * k));
+          const kEff = newS / curS;
+
+          // A change in finger count teleports the focal. Re-anchor on the new
+          // focal instead of interpreting that teleport as a drag.
+          const reanchor = e.numberOfPointers !== _tPrevPointers.current;
+          const f0x = reanchor ? fx : _tPrevFX.current;
+          const f0y = reanchor ? fy : _tPrevFY.current;
+
+          // T' = f1 - k*(f0 - T) — holds the content under the focal in place,
+          // and with f1 != f0 also carries the two-finger drag.
+          const c = clampTellPan(newS, fx - kEff * (f0x - curTX), fy - kEff * (f0y - curTY));
+          tellScale.setValue(newS);
           tellTX.setValue(c.tx);
           tellTY.setValue(c.ty);
-        })
-        .onEnd(() => {
-          _tSavedScale.current = tellScale.__getValue();
-          _tSavedTX.current    = tellTX.__getValue();
-          _tSavedTY.current    = tellTY.__getValue();
+
+          _tPrevPinch.current    = e.scale;
+          _tPrevFX.current       = fx;
+          _tPrevFY.current       = fy;
+          _tPrevPointers.current = e.numberOfPointers;
         }),
 
       // maxPointers(1) keeps pan off during a pinch, so the focal math above owns
@@ -270,21 +300,21 @@ export default function GameplayScreen() {
         .maxPointers(1)
         .onStart(() => {
           tellTX.stopAnimation(); tellTY.stopAnimation();
-          _tSavedTX.current = tellTX.__getValue();
-          _tSavedTY.current = tellTY.__getValue();
+          _tPrevPanX.current = 0;
+          _tPrevPanY.current = 0;
         })
         .onUpdate(e => {
+          const dx = e.translationX - _tPrevPanX.current;
+          const dy = e.translationY - _tPrevPanY.current;
+          _tPrevPanX.current = e.translationX;
+          _tPrevPanY.current = e.translationY;
           const c = clampTellPan(
             tellScale.__getValue(),
-            _tSavedTX.current + e.translationX,
-            _tSavedTY.current + e.translationY,
+            tellTX.__getValue() + dx,
+            tellTY.__getValue() + dy,
           );
           tellTX.setValue(c.tx);
           tellTY.setValue(c.ty);
-        })
-        .onEnd(() => {
-          _tSavedTX.current = tellTX.__getValue();
-          _tSavedTY.current = tellTY.__getValue();
         }),
 
       // Double-tap toggles between the tell framing and the whole image.
@@ -297,9 +327,6 @@ export default function GameplayScreen() {
           const zoomedIn = tellScale.__getValue() > (f.s + TELL_MIN_ZOOM) / 2;
           const to       = zoomedIn ? { s: TELL_MIN_ZOOM, tx: 0, ty: 0 } : f;
           const c        = clampTellPan(to.s, to.tx, to.ty);
-          _tSavedScale.current = to.s;
-          _tSavedTX.current    = c.tx;
-          _tSavedTY.current    = c.ty;
           Animated.parallel([
             Animated.spring(tellScale, { toValue: to.s,  useNativeDriver: false, bounciness: 0 }),
             Animated.spring(tellTX,    { toValue: c.tx,  useNativeDriver: false, bounciness: 0 }),
