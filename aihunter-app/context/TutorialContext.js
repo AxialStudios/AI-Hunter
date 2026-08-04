@@ -18,7 +18,7 @@ export function TutorialProvider({ children }) {
     setTutorialActive(false);
     // One frame delay so the tab bar mounts at opacity:0 before the animation starts.
     setTimeout(() => {
-      Animated.timing(tabBarOpacity, { toValue: 1, duration: 600, useNativeDriver: true }).start();
+      Animated.timing(tabBarOpacity, { toValue: 1, duration: 1200, useNativeDriver: true }).start();
     }, 16);
   }
 

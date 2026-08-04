@@ -368,6 +368,7 @@ export default function GameplayScreen() {
   const labelsOpacity  = useRef(new Animated.Value(0)).current;
   const bottomOpacity  = useRef(new Animated.Value(0)).current;
   const shimmerAnims   = useRef(Array.from({ length: 5 }, () => new Animated.Value(0))).current;
+  const tellsPulse     = useRef(new Animated.Value(0)).current;
 
   useFocusEffect(useCallback(() => { fetchTask(); }, []));
 
@@ -392,9 +393,16 @@ export default function GameplayScreen() {
     if (tutorialStep === 'confirm' && result) setTutorialStep('tells');
   }, [result]);
 
-  // 'tells': auto-expand the tells section
+  // 'tells': auto-expand the tells section + pulse ring
   useEffect(() => {
-    if (tutorialStep === 'tells') setShowTells(true);
+    if (tutorialStep !== 'tells') return;
+    setShowTells(true);
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(tellsPulse, { toValue: 1,   duration: 900, useNativeDriver: true }),
+      Animated.timing(tellsPulse, { toValue: 0.15, duration: 900, useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => { loop.stop(); tellsPulse.setValue(0); };
   }, [tutorialStep]);
 
   async function advanceTutorial() {
@@ -842,6 +850,15 @@ export default function GameplayScreen() {
             {/* Tells + next pair */}
             {result && (
               <Animated.View style={[styles.bottomContent, { marginTop: 14, opacity: bottomOpacity }]}>
+                {/* Tutorial hint during tells step */}
+                {tutorialStep === 'tells' && (
+                  <View style={styles.tutorialTellsHint}>
+                    <Text style={styles.tutorialTellsHintText}>
+                      {'Those percentages show how everyone voted.\nTap any tell below to explore it.'}
+                    </Text>
+                  </View>
+                )}
+
                 {/* Side-by-side action row */}
                 <View style={styles.actionRow}>
                   <TouchableOpacity style={styles.tellsBtn} onPress={() => { light(); setShowTells(v => !v); }}>
@@ -859,6 +876,18 @@ export default function GameplayScreen() {
                 {/* Tells section: outer collapses to height 0 (not unmounted) so the
                     Image stays mounted and fully decoded — no flash when opening. */}
                 <View style={[styles.tellsSection, !showTells && styles.collapsedTells]}>
+                  {tutorialStep === 'tells' && showTells && (
+                    <Animated.View
+                      pointerEvents="none"
+                      style={{
+                        ...StyleSheet.absoluteFillObject,
+                        borderRadius: radius.md,
+                        borderWidth: 2,
+                        borderColor: '#fff',
+                        opacity: tellsPulse,
+                      }}
+                    />
+                  )}
                   {showTells && <Text style={styles.tellsHeading}>The AI image</Text>}
 
                   <View
@@ -1123,6 +1152,9 @@ const styles = StyleSheet.create({
 
   nextBtn:     { flex: 1, backgroundColor: colors.textPrimary, paddingVertical: 18, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   nextBtnText: { color: colors.bg, fontSize: 17, fontFamily: fonts.bold },
+
+  tutorialTellsHint:     { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: radius.md, paddingVertical: 12, paddingHorizontal: 16, alignItems: 'center' },
+  tutorialTellsHintText: { fontSize: 15, fontFamily: fonts.medium, color: colors.textPrimary, textAlign: 'center', lineHeight: 22 },
 
   // ── Zoom modal ────────────────────────────────────────────────
   modalContainer:   { flex: 1, backgroundColor: '#000' },

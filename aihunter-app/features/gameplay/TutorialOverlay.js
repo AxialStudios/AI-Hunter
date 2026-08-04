@@ -24,9 +24,10 @@ export default function TutorialOverlay({ step, onAdvance, selectedSide }) {
 }
 
 function CinematicScreen({ onAdvance, insets }) {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const cardTY  = useRef(new Animated.Value(40)).current;
-  const textTY  = useRef(new Animated.Value(20)).current;
+  const opacity   = useRef(new Animated.Value(0)).current;
+  const cardTY    = useRef(new Animated.Value(40)).current;
+  const textTY    = useRef(new Animated.Value(20)).current;
+  const leaveAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.sequence([
@@ -38,8 +39,12 @@ function CinematicScreen({ onAdvance, insets }) {
     ]).start();
   }, []);
 
+  function handleReady() {
+    Animated.timing(leaveAnim, { toValue: 0, duration: 280, useNativeDriver: true }).start(() => onAdvance());
+  }
+
   return (
-    <View style={[StyleSheet.absoluteFillObject, styles.cinematicBg]}>
+    <Animated.View style={[StyleSheet.absoluteFillObject, styles.cinematicBg, { opacity: leaveAnim }]}>
       <Animated.View
         style={[styles.cinematicInner, { opacity, paddingTop: insets.top + 52, paddingBottom: insets.bottom + 44 }]}
       >
@@ -54,22 +59,26 @@ function CinematicScreen({ onAdvance, insets }) {
         {/* Ghost card pair — with REAL / AI labels below, matching game results UI */}
         <Animated.View style={[styles.ghostRow, { transform: [{ translateY: cardTY }] }]}>
           <View style={styles.ghostCardCol}>
-            <View style={[styles.ghostCard, styles.ghostCardReal]} />
+            <View style={[styles.ghostCard, styles.ghostCardReal]}>
+              <Feather name="image" size={32} color="#505050" />
+            </View>
             <Text style={styles.ghostCardTag}>REAL</Text>
           </View>
           <View style={styles.ghostCardCol}>
-            <View style={[styles.ghostCard, styles.ghostCardAI]} />
+            <View style={[styles.ghostCard, styles.ghostCardAI]}>
+              <Feather name="cpu" size={32} color="#505050" />
+            </View>
             <Text style={styles.ghostCardTag}>AI</Text>
           </View>
         </Animated.View>
 
         {/* CTA */}
-        <TouchableOpacity style={styles.cinBtn} onPress={onAdvance} activeOpacity={0.85}>
+        <TouchableOpacity style={styles.cinBtn} onPress={handleReady} activeOpacity={0.85}>
           <Text style={styles.cinBtnText}>I'm ready</Text>
           <Feather name="arrow-right" size={18} color={colors.bg} style={{ marginLeft: 8 }} />
         </TouchableOpacity>
       </Animated.View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -178,15 +187,17 @@ const styles = StyleSheet.create({
     width: CARD_W,
     height: GHOST_H,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: '#1E1E1E',
+    borderWidth: 1.5,
+    borderColor: '#383838',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  ghostCardReal: { backgroundColor: '#131313' },
-  ghostCardAI:   { backgroundColor: '#101010' },
+  ghostCardReal: { backgroundColor: '#1E1E1E' },
+  ghostCardAI:   { backgroundColor: '#1A1A1A' },
   ghostCardTag: {
     fontSize: 11,
     fontFamily: fonts.semiBold,
-    color: '#333',
+    color: '#888',
     letterSpacing: 2.5,
   },
 
