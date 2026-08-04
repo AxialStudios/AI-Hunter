@@ -14,6 +14,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ThemeProvider } from './context/ThemeContext';
 import { HapticsProvider } from './context/HapticsContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { TutorialProvider } from './context/TutorialContext';
 import ThesisScreen from './features/onboarding/ThesisScreen';
 import OnboardingScreen from './features/onboarding/OnboardingScreen';
 import MainTabs from './navigation/MainTabs';
@@ -35,8 +36,8 @@ function AppNavigator() {
   const [initialRoute, setInitialRoute] = useState(null);
 
   useEffect(() => {
-    // DEV RESET — remove this line before shipping
-    AsyncStorage.removeItem('hasSeenThesis').then(() =>
+    // DEV RESET — remove these lines before shipping
+    AsyncStorage.multiRemove(['hasSeenThesis', 'ai_hunter_tutorial_done']).then(() =>
       AsyncStorage.getItem('hasSeenThesis').then(val => {
         setInitialRoute(val ? 'Onboarding' : 'Thesis');
       })
@@ -82,7 +83,9 @@ export default function App() {
       <ThemeProvider>
         <HapticsProvider>
           <AuthProvider>
-            <AppNavigator />
+            <TutorialProvider>
+              <AppNavigator />
+            </TutorialProvider>
           </AuthProvider>
         </HapticsProvider>
       </ThemeProvider>

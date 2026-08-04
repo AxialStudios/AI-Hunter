@@ -14,6 +14,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useHaptics } from '../../context/HapticsContext';
 import { colors, fonts, radius } from '../../constants/theme';
 import TutorialOverlay from './TutorialOverlay';
+import { useTutorial } from '../../context/TutorialContext';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const CARD_W = Math.floor((SW - 32 - 10) / 2);
@@ -34,6 +35,8 @@ export default function GameplayScreen() {
   const { user }                                        = useAuth();
   const { medium, success, error: hapticError, light } = useHaptics();
   const insets = useSafeAreaInsets();
+  const { startTutorial, revealTabBar } = useTutorial();
+  const wasTutorial = useRef(false);
 
   const [phase, setPhase]           = useState('loading');
   const [task, setTask]             = useState(null);
@@ -46,9 +49,8 @@ export default function GameplayScreen() {
   const [rightPctDisplay, setRightPctDisplay] = useState(0);
   const startTime                   = useRef(Date.now());
 
-  // null = not yet loaded from storage; 0 = complete; 1/2/3 = active step
+  // null = loading from storage; 0 = complete; string = active step
   const [tutorialStep, setTutorialStep] = useState(null);
-  const [imagesReady,  setImagesReady]  = useState(false);
 
   const [showTells, setShowTells] = useState(false);
   const [zoomTell,    setZoomTell]    = useState(null);
@@ -371,23 +373,37 @@ export default function GameplayScreen() {
 
   useEffect(() => {
     AsyncStorage.getItem('ai_hunter_tutorial_done').then(val => {
-      setTutorialStep(val ? 0 : 1);
+      setTutorialStep(val ? 0 : 'cinematic');
     });
   }, []);
 
-  // Step 2 → 3: when result arrives (user confirmed during tutorial), schedule the tells card
+  // Hide tab bar when tutorial starts; reveal is deferred to handleNextCard
   useEffect(() => {
-    if (!result || tutorialStep !== 2) return;
-    const t = setTimeout(() => setTutorialStep(3), 1500);
-    return () => clearTimeout(t);
-  }, [result, tutorialStep]);
+    if (tutorialStep === 'cinematic') startTutorial();
+  }, [tutorialStep]);
+
+  // 'pick' → 'zoom': user selected an image
+  useEffect(() => {
+    if (tutorialStep === 'pick' && selectedSide) setTutorialStep('zoom');
+  }, [selectedSide]);
+
+  // 'confirm' → 'tells': result arrived
+  useEffect(() => {
+    if (tutorialStep === 'confirm' && result) setTutorialStep('tells');
+  }, [result]);
+
+  // 'tells': auto-expand the tells section
+  useEffect(() => {
+    if (tutorialStep === 'tells') setShowTells(true);
+  }, [tutorialStep]);
 
   async function advanceTutorial() {
-    if (tutorialStep === 1) {
-      setTutorialStep(2);
-    } else if (tutorialStep === 3) {
+    if (tutorialStep === 'cinematic') {
+      setTutorialStep('pick');
+    } else if (tutorialStep === 'tells') {
       await AsyncStorage.setItem('ai_hunter_tutorial_done', '1');
       setTutorialStep(0);
+      wasTutorial.current = true; // tab bar reveal deferred to Next Pair
     }
   }
 
@@ -402,7 +418,6 @@ export default function GameplayScreen() {
     setSelectedSide(null);
     setInspectSide(null);
     setShowTells(false);
-    setImagesReady(false);
 
     cardKey.current += 1;
     loadCount.current = 0;
@@ -455,7 +470,6 @@ export default function GameplayScreen() {
   function handleImageLoad() {
     loadCount.current += 1;
     if (loadCount.current === 2) {
-      setImagesReady(true);
       // Both images rendered — start prefetching the next card immediately so
       // the full gameplay duration (typically 3–20 s) is available for download
       // and decode before the user taps Next Pair.
@@ -567,14 +581,14 @@ export default function GameplayScreen() {
   }
 
   function closeInspect() {
-    // Just hide the overlay. Transforms stay wherever they are — the overlay
-    // is invisible at opacity:0.001, so no snap/squish flash on close.
-    // openInspect() resets them on the next open before anything is visible.
     setInspectSide(null);
+    if (tutorialStep === 'zoom') setTutorialStep('confirm');
   }
 
   function handleNextCard() {
     light();
+    const afterTutorial = wasTutorial.current;
+    wasTutorial.current = false;
     setShowTells(false);
     setZoomTell(null);
     setSelectedSide(null);
@@ -583,6 +597,7 @@ export default function GameplayScreen() {
 
     Animated.timing(resultsOpacity, { toValue: 0, duration: 150, useNativeDriver: true })
       .start(() => {
+        if (afterTutorial) revealTabBar();
         if (nextTask) {
           // Images hidden while source props update in-place (no cardKey change).
           // The pre-render above keeps decoded textures in GPU memory, so
@@ -733,18 +748,16 @@ export default function GameplayScreen() {
 
             {/* Bottom section: flex fills rest, confirm button at bottom */}
             <View style={styles.playingBottom}>
-              {tutorialStep === 2 && selectedSide && (
-                <View style={styles.tutZoomHint}>
-                  <Feather name="zoom-in" size={14} color={colors.textSecondary} />
-                  <Text style={styles.tutZoomText}>Tap ↗ on the image to zoom in and inspect</Text>
-                </View>
-              )}
               <View style={styles.confirmContainer}>
                 <TouchableOpacity
-                  style={[styles.confirmBtn, (!selectedSide || phase !== 'playing') && { opacity: 0 }]}
+                  style={[
+                    styles.confirmBtn,
+                    (!selectedSide || phase !== 'playing') && { opacity: 0 },
+                    tutorialStep === 'zoom' && { opacity: 0.28 },
+                  ]}
                   onPress={handleConfirm}
                   activeOpacity={0.85}
-                  disabled={!selectedSide || phase !== 'playing'}
+                  disabled={!selectedSide || phase !== 'playing' || tutorialStep === 'zoom'}
                 >
                   <Text style={styles.confirmBtnText}>Confirm  →</Text>
                 </TouchableOpacity>
@@ -830,7 +843,11 @@ export default function GameplayScreen() {
                   <TouchableOpacity style={styles.tellsBtn} onPress={() => { light(); setShowTells(v => !v); }}>
                     <Text style={styles.tellsBtnText}>{showTells ? '▲  Hide tells' : '▼  See the tells'}</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.nextBtn} onPress={handleNextCard}>
+                  <TouchableOpacity
+                    style={[styles.nextBtn, tutorialStep === 'tells' && { opacity: 0.3 }]}
+                    onPress={handleNextCard}
+                    disabled={tutorialStep === 'tells'}
+                  >
                     <Text style={styles.nextBtnText}>Next Pair  →</Text>
                   </TouchableOpacity>
                 </View>
@@ -885,8 +902,11 @@ export default function GameplayScreen() {
                       <TouchableOpacity
                         key={i}
                         style={styles.tellItem}
-                        onPress={() => { if (tell.x != null) openTell(tell); }}
-                        activeOpacity={tell.x != null ? 0.72 : 1}
+                        onPress={() => {
+                          if (tutorialStep === 'tells') advanceTutorial();
+                          if (tell.x != null) openTell(tell);
+                        }}
+                        activeOpacity={0.72}
                       >
                         <View style={styles.tellItemHeader}>
                           <View style={styles.tellBadge}>
@@ -905,10 +925,14 @@ export default function GameplayScreen() {
 
       {/* ── TUTORIAL OVERLAY ── above game layers, below inspect/zoom modals ── */}
       <TutorialOverlay
-        step={tutorialStep === 1 && imagesReady && phase === 'playing' ? 1
-            : tutorialStep === 3 ? 3
-            : null}
-        onDismiss={advanceTutorial}
+        step={
+          tutorialStep === 'cinematic' ? 'cinematic' :
+          tutorialStep === 'pick' && phase === 'playing' ? 'pick' :
+          tutorialStep === 'zoom' ? 'zoom' :
+          null
+        }
+        onAdvance={advanceTutorial}
+        selectedSide={selectedSide}
       />
 
       {/* ── ZOOM OVERLAY ─ always in native layer so image stays GPU-composited ── */}
@@ -1056,8 +1080,6 @@ const styles = StyleSheet.create({
   image:                { width: '100%', height: '100%' },
   fill:                 { position: 'absolute', bottom: 0, left: 0, right: 0 },
   zoomIconBtn:          { position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 14, padding: 6 },
-  tutZoomHint:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingBottom: 14 },
-  tutZoomText:          { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary },
   confirmContainer:     { paddingHorizontal: 16, paddingBottom: 12 },
   confirmBtn:           { backgroundColor: colors.textPrimary, paddingVertical: 18, borderRadius: radius.pill, alignItems: 'center' },
   confirmBtnText:       { color: colors.bg, fontSize: 17, fontFamily: fonts.bold },

@@ -1,4 +1,4 @@
-import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, View, Text, Animated, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import DailyScreen       from '../features/daily/DailyScreen';
 import LeaderboardScreen from '../features/leaderboard/LeaderboardScreen';
 import ProfileScreen     from '../features/profile/ProfileScreen';
 import { colors, fonts } from '../constants/theme';
+import { useTutorial } from '../context/TutorialContext';
 
 const Tab = createBottomTabNavigator();
 
@@ -19,8 +20,10 @@ const TABS = [
 
 function TabBar({ state, navigation }) {
   const insets = useSafeAreaInsets();
+  const { tutorialActive, tabBarOpacity } = useTutorial();
+  if (tutorialActive) return null;
   return (
-    <View style={[styles.bar, { paddingBottom: insets.bottom || 12 }]}>
+    <Animated.View style={[styles.bar, { paddingBottom: insets.bottom || 12, opacity: tabBarOpacity }]}>
       {state.routes.map((route, i) => {
         const focused = state.index === i;
         const tab = TABS[i];
@@ -42,7 +45,7 @@ function TabBar({ state, navigation }) {
           </TouchableOpacity>
         );
       })}
-    </View>
+    </Animated.View>
   );
 }
 
