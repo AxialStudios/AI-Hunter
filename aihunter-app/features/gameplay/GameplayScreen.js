@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, Image, Animated, Easing, TouchableOpacity,
-  ScrollView, StyleSheet, Dimensions, ActivityIndicator, PanResponder,
+  ScrollView, StyleSheet, Dimensions, ActivityIndicator,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -21,6 +21,9 @@ const MODAL_ZOOM  = 2.5;
 const MODAL_IMG_H = Math.floor(SW / 0.9);
 const TELL_MIN_ZOOM = 1;
 const TELL_MAX_ZOOM = 6;
+const INSPECT_MIN_ZOOM        = 1;
+const INSPECT_MAX_ZOOM        = 4;
+const INSPECT_DOUBLE_TAP_ZOOM = 2.5;
 
 const CORRECT_FILL   = 'rgba(34,197,94,0.72)';
 const INCORRECT_FILL = 'rgba(239,68,68,0.72)';
@@ -49,133 +52,133 @@ export default function GameplayScreen() {
   const [aiLayout,      setAiLayout]      = useState({ width: 0, height: 0 });
   const [aiNaturalSize, setAiNaturalSize] = useState({ width: 0, height: 0 });
 
-  // Inspect pinch-to-zoom: Animated values driven directly by PanResponder.
-  // Reset via .setValue() on close — no iOS UIScrollView state to fight.
+  // ── Inspect pinch/pan/double-tap ── same RNGH approach as the tell overlay
+  // below, so both overlays share one set of gesture semantics. Transform order
+  // is [translateX, translateY, scale] → translation is in post-scale screen px,
+  // giving 1:1 finger tracking with no divide-by-scale.
   const inspectScale  = useRef(new Animated.Value(1)).current;
   const inspectTransX = useRef(new Animated.Value(0)).current;
   const inspectTransY = useRef(new Animated.Value(0)).current;
-  const _iBaseScale      = useRef(1);
-  const _iBaseTX         = useRef(0);
-  const _iBaseTY         = useRef(0);
-  const _iPinchStartDist = useRef(1);
-  const _iPinchBaseSc    = useRef(1);
-  const _iPanStartX      = useRef(0);
-  const _iPanStartY      = useRef(0);
-  const _iNumTouches     = useRef(0);
-  const _iAreaH          = useRef(SH); // updated by onLayout; used for Y-axis clamp
+  const _iAreaH = useRef(SH); // set by onLayout — this frame is full-bleed, so height varies
+  // Per-frame gesture deltas; see the tell overlay for why this is incremental.
+  const _iPrevPinch    = useRef(1);
+  const _iPrevFX       = useRef(0);
+  const _iPrevFY       = useRef(0);
+  const _iPrevPointers = useRef(0);
+  const _iPrevPanX     = useRef(0);
+  const _iPrevPanY     = useRef(0);
 
-  const inspectPanResponder = useRef(PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder:  () => true,
+  function clampInspectPan(s, tx, ty) {
+    const maxX = Math.max(0, (s - 1) * SW / 2);
+    const maxY = Math.max(0, (s - 1) * _iAreaH.current / 2);
+    return {
+      tx: Math.max(-maxX, Math.min(maxX, tx)),
+      ty: Math.max(-maxY, Math.min(maxY, ty)),
+    };
+  }
 
-    onPanResponderGrant: (e) => {
-      // Stop any running spring so we anchor from the actual current position
-      inspectScale.stopAnimation();
-      inspectTransX.stopAnimation();
-      inspectTransY.stopAnimation();
-      _iBaseScale.current = inspectScale.__getValue();
-      _iBaseTX.current    = inspectTransX.__getValue();
-      _iBaseTY.current    = inspectTransY.__getValue();
+  // Confined to the frame: zoom-about-focal gain scales with |focal|, so a focal
+  // allowed to wander onto the header/footer bars makes a tiny pinch whip the image.
+  function inspectFocalFromCentre(x, y) {
+    const h = _iAreaH.current;
+    return {
+      fx: Math.max(0, Math.min(SW, x)) - SW / 2,
+      fy: Math.max(0, Math.min(h, y)) - h / 2,
+    };
+  }
 
-      const t = e.nativeEvent.touches;
-      _iNumTouches.current = t.length;
-      if (t.length >= 2) {
-        const dx = t[0].pageX - t[1].pageX;
-        const dy = t[0].pageY - t[1].pageY;
-        _iPinchStartDist.current = Math.sqrt(dx * dx + dy * dy) || 1;
-        _iPinchBaseSc.current    = _iBaseScale.current;
-        _iPanStartX.current = (t[0].pageX + t[1].pageX) / 2;
-        _iPanStartY.current = (t[0].pageY + t[1].pageY) / 2;
-      } else {
-        _iPanStartX.current = t[0].pageX;
-        _iPanStartY.current = t[0].pageY;
-      }
-    },
+  const inspectGesture = useRef(
+    Gesture.Simultaneous(
+      Gesture.Pinch()
+        .runOnJS(true)
+        .onStart(e => {
+          inspectScale.stopAnimation(); inspectTransX.stopAnimation(); inspectTransY.stopAnimation();
+          const { fx, fy } = inspectFocalFromCentre(e.focalX, e.focalY);
+          _iPrevPinch.current    = 1; // e.scale is 1 at gesture start
+          _iPrevFX.current       = fx;
+          _iPrevFY.current       = fy;
+          _iPrevPointers.current = e.numberOfPointers;
+        })
+        .onUpdate(e => {
+          const { fx, fy } = inspectFocalFromCentre(e.focalX, e.focalY);
+          const curS  = inspectScale.__getValue();
+          const curTX = inspectTransX.__getValue();
+          const curTY = inspectTransY.__getValue();
 
-    onPanResponderMove: (e) => {
-      const t = e.nativeEvent.touches;
+          // Incremental scale factor, guarded against the spike e.scale produces
+          // when a finger lifts or lands.
+          let k = e.scale / (_iPrevPinch.current || 1);
+          if (!isFinite(k) || k <= 0) k = 1;
+          k = Math.max(0.8, Math.min(1.25, k));
+          const newS = Math.max(INSPECT_MIN_ZOOM, Math.min(INSPECT_MAX_ZOOM, curS * k));
+          const kEff = newS / curS;
 
-      if (t.length >= 2) {
-        // Re-anchor when finger count changes mid-gesture
-        if (_iNumTouches.current !== t.length) {
-          const dx = t[0].pageX - t[1].pageX;
-          const dy = t[0].pageY - t[1].pageY;
-          _iPinchStartDist.current = Math.sqrt(dx * dx + dy * dy) || 1;
-          const cur = inspectScale.__getValue();
-          _iPinchBaseSc.current = cur;
-          _iBaseScale.current   = cur;
-          _iBaseTX.current      = inspectTransX.__getValue();
-          _iBaseTY.current      = inspectTransY.__getValue();
-          _iPanStartX.current = (t[0].pageX + t[1].pageX) / 2;
-          _iPanStartY.current = (t[0].pageY + t[1].pageY) / 2;
-          _iNumTouches.current = t.length;
-          return;
-        }
+          // A change in finger count teleports the focal — re-anchor rather than
+          // read that teleport as a drag.
+          const reanchor = e.numberOfPointers !== _iPrevPointers.current;
+          const f0x = reanchor ? fx : _iPrevFX.current;
+          const f0y = reanchor ? fy : _iPrevFY.current;
 
-        const dx   = t[0].pageX - t[1].pageX;
-        const dy   = t[0].pageY - t[1].pageY;
-        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-        const newS = Math.max(1, Math.min(4, _iPinchBaseSc.current * (dist / _iPinchStartDist.current)));
-        inspectScale.setValue(newS);
+          // T' = f1 - k*(f0 - T) — pins the content under the focal, and with
+          // f1 != f0 also carries the two-finger drag.
+          const c = clampInspectPan(newS, fx - kEff * (f0x - curTX), fy - kEff * (f0y - curTY));
+          inspectScale.setValue(newS);
+          inspectTransX.setValue(c.tx);
+          inspectTransY.setValue(c.ty);
 
-        // translateX/Y are in pre-scale space; screen-space delta / newS → 1:1 apparent movement.
-        // Formula: newTX = (baseTX * baseSc + screenDelta) / newS
-        const midX = (t[0].pageX + t[1].pageX) / 2;
-        const midY = (t[0].pageY + t[1].pageY) / 2;
-        const rawTX = (_iBaseTX.current * _iPinchBaseSc.current + midX - _iPanStartX.current) / newS;
-        const rawTY = (_iBaseTY.current * _iPinchBaseSc.current + midY - _iPanStartY.current) / newS;
-        // Clamp: keep image covering the view at all zoom levels.
-        // At newS=1 this collapses to ±0, forcing centre; at newS=4 allows ±3/8 of dim.
-        const maxTX = SW / 2 * (1 - 1 / newS);
-        const maxTY = _iAreaH.current / 2 * (1 - 1 / newS);
-        inspectTransX.setValue(Math.max(-maxTX, Math.min(maxTX, rawTX)));
-        inspectTransY.setValue(Math.max(-maxTY, Math.min(maxTY, rawTY)));
+          _iPrevPinch.current    = e.scale;
+          _iPrevFX.current       = fx;
+          _iPrevFY.current       = fy;
+          _iPrevPointers.current = e.numberOfPointers;
+        }),
 
-      } else if (t.length === 1) {
-        if (_iNumTouches.current !== 1) {
-          const cur = inspectScale.__getValue();
-          _iBaseScale.current = cur;
-          _iBaseTX.current    = inspectTransX.__getValue();
-          _iBaseTY.current    = inspectTransY.__getValue();
-          _iPanStartX.current = t[0].pageX;
-          _iPanStartY.current = t[0].pageY;
-          _iNumTouches.current = 1;
-          return;
-        }
-        // Divide screen-space delta by scale so 1px of finger = 1px apparent movement.
-        const s    = _iBaseScale.current;
-        const rawTX = _iBaseTX.current + (t[0].pageX - _iPanStartX.current) / s;
-        const rawTY = _iBaseTY.current + (t[0].pageY - _iPanStartY.current) / s;
-        const maxTX = SW / 2 * (1 - 1 / s);
-        const maxTY = _iAreaH.current / 2 * (1 - 1 / s);
-        inspectTransX.setValue(Math.max(-maxTX, Math.min(maxTX, rawTX)));
-        inspectTransY.setValue(Math.max(-maxTY, Math.min(maxTY, rawTY)));
-      }
+      // maxPointers(1) keeps pan off during a pinch, so the focal math above owns
+      // two-finger drag and the two never double-count translation.
+      Gesture.Pan()
+        .runOnJS(true)
+        .maxPointers(1)
+        .onStart(() => {
+          inspectTransX.stopAnimation(); inspectTransY.stopAnimation();
+          _iPrevPanX.current = 0;
+          _iPrevPanY.current = 0;
+        })
+        .onUpdate(e => {
+          const dx = e.translationX - _iPrevPanX.current;
+          const dy = e.translationY - _iPrevPanY.current;
+          _iPrevPanX.current = e.translationX;
+          _iPrevPanY.current = e.translationY;
+          const c = clampInspectPan(
+            inspectScale.__getValue(),
+            inspectTransX.__getValue() + dx,
+            inspectTransY.__getValue() + dy,
+          );
+          inspectTransX.setValue(c.tx);
+          inspectTransY.setValue(c.ty);
+        }),
 
-      _iNumTouches.current = t.length;
-    },
-
-    onPanResponderRelease: () => {
-      _iBaseScale.current = inspectScale.__getValue();
-      _iBaseTX.current    = inspectTransX.__getValue();
-      _iBaseTY.current    = inspectTransY.__getValue();
-      _iNumTouches.current = 0;
-
-      // Snap back to neutral if scale drifted below 1
-      if (_iBaseScale.current < 1.05) {
-        _iBaseScale.current = 1;
-        _iBaseTX.current    = 0;
-        _iBaseTY.current    = 0;
-        Animated.parallel([
-          Animated.spring(inspectScale,  { toValue: 1, useNativeDriver: false }),
-          Animated.spring(inspectTransX, { toValue: 0, useNativeDriver: false }),
-          Animated.spring(inspectTransY, { toValue: 0, useNativeDriver: false }),
-        ]).start();
-      }
-    },
-
-    onPanResponderTerminate: () => { _iNumTouches.current = 0; },
-  })).current;
+      // Double-tap toggles fit ⇄ INSPECT_DOUBLE_TAP_ZOOM about the tapped point.
+      Gesture.Tap()
+        .runOnJS(true)
+        .numberOfTaps(2)
+        .maxDuration(260)
+        .onEnd(e => {
+          const curS  = inspectScale.__getValue();
+          const curTX = inspectTransX.__getValue();
+          const curTY = inspectTransY.__getValue();
+          const to = curS > (INSPECT_MIN_ZOOM + INSPECT_DOUBLE_TAP_ZOOM) / 2
+            ? INSPECT_MIN_ZOOM
+            : INSPECT_DOUBLE_TAP_ZOOM;
+          const k = to / curS;
+          const { fx, fy } = inspectFocalFromCentre(e.x, e.y);
+          const c = clampInspectPan(to, fx - k * (fx - curTX), fy - k * (fy - curTY));
+          Animated.parallel([
+            Animated.spring(inspectScale,  { toValue: to,   useNativeDriver: false, bounciness: 0 }),
+            Animated.spring(inspectTransX, { toValue: c.tx, useNativeDriver: false, bounciness: 0 }),
+            Animated.spring(inspectTransY, { toValue: c.ty, useNativeDriver: false, bounciness: 0 }),
+          ]).start();
+        }),
+    )
+  ).current;
 
   // ── Tell zoom: RNGH pinch + pan driving RN Animated values. ──
   // Transform order is [translateX, translateY, scale] → the translation is applied
@@ -530,10 +533,6 @@ export default function GameplayScreen() {
     inspectScale.setValue(1);
     inspectTransX.setValue(0);
     inspectTransY.setValue(0);
-    _iBaseScale.current  = 1;
-    _iBaseTX.current     = 0;
-    _iBaseTY.current     = 0;
-    _iNumTouches.current = 0;
     setInspectSide(side);
   }
 
@@ -541,7 +540,6 @@ export default function GameplayScreen() {
     // Just hide the overlay. Transforms stay wherever they are — the overlay
     // is invisible at opacity:0.001, so no snap/squish flash on close.
     // openInspect() resets them on the next open before anything is visible.
-    _iNumTouches.current = 0;
     setInspectSide(null);
   }
 
@@ -908,9 +906,9 @@ export default function GameplayScreen() {
         </View>
       </View>
 
-      {/* ── INSPECT OVERLAY ── PanResponder-based pinch-to-zoom.
+      {/* ── INSPECT OVERLAY ── RNGH pinch/pan/double-tap.
            Both images always mounted (source never changes = no flash on open).
-           Gesture state in Animated.Values + refs; reset via .setValue() on close. ── */}
+           Gesture state in Animated.Values + refs; reset via .setValue() on open. ── */}
       <View
         style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.bg, opacity: inspectSide ? 1 : 0.001 }]}
         pointerEvents={inspectSide ? 'auto' : 'none'}
@@ -923,28 +921,30 @@ export default function GameplayScreen() {
           <View style={{ width: 44 }} />
         </View>
 
-        <View
-          style={{ flex: 1, overflow: 'hidden' }}
-          onLayout={e => { const h = e.nativeEvent.layout.height; if (h > 0) _iAreaH.current = h; }}
-          {...inspectPanResponder.panHandlers}
-        >
-          {/* Two always-mounted images — source never changes, so no flash when
-              switching sides. Only opacity toggles (0/1) per active side. */}
-          {(['left', 'right']).map(side => (
-            <Animated.Image
-              key={side}
-              source={{ uri: side === 'left' ? leftUrl : rightUrl }}
-              style={[
-                StyleSheet.absoluteFillObject,
-                {
-                  opacity: inspectSide === side ? 1 : 0,
-                  transform: [{ scale: inspectScale }, { translateX: inspectTransX }, { translateY: inspectTransY }],
-                },
-              ]}
-              resizeMode="contain"
-            />
-          ))}
-        </View>
+        <GestureDetector gesture={inspectGesture}>
+          <View
+            style={{ flex: 1, overflow: 'hidden' }}
+            collapsable={false}
+            onLayout={e => { const h = e.nativeEvent.layout.height; if (h > 0) _iAreaH.current = h; }}
+          >
+            {/* Two always-mounted images — source never changes, so no flash when
+                switching sides. Only opacity toggles (0/1) per active side. */}
+            {(['left', 'right']).map(side => (
+              <Animated.Image
+                key={side}
+                source={{ uri: side === 'left' ? leftUrl : rightUrl }}
+                style={[
+                  StyleSheet.absoluteFillObject,
+                  {
+                    opacity: inspectSide === side ? 1 : 0,
+                    transform: [{ translateX: inspectTransX }, { translateY: inspectTransY }, { scale: inspectScale }],
+                  },
+                ]}
+                resizeMode="contain"
+              />
+            ))}
+          </View>
+        </GestureDetector>
 
         <View style={[styles.inspectFooter, { paddingBottom: insets.bottom + 16 }]}>
           <TouchableOpacity style={styles.modalDoneBtn} onPress={closeInspect}>
