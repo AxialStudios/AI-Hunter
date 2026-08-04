@@ -674,7 +674,11 @@ export default function GameplayScreen() {
             {/* Top section: fixed height matching results verdict block + gap
                 so the imageRow sits at the same Y in both playing and results */}
             <View style={styles.playingTop}>
-              {phase === 'loading' && !task ? (
+              {tutorialStep === 'pick' ? (
+                <Text style={styles.tutorialPrompt}>Tap the image you think is real</Text>
+              ) : tutorialStep === 'zoom' ? (
+                <Text style={styles.tutorialPrompt}>Zoom in to inspect it</Text>
+              ) : phase === 'loading' && !task ? (
                 <ActivityIndicator color={colors.textPrimary} />
               ) : loadError ? (
                 <Text style={styles.errorText}>{loadError}</Text>
@@ -1058,6 +1062,7 @@ const styles = StyleSheet.create({
   playingTop:    { height: 164, justifyContent: 'flex-end', paddingBottom: 14 },
   playingBottom: { flex: 1, justifyContent: 'flex-end' },
   prompt:        { fontSize: 23, fontFamily: fonts.semiBold, color: colors.textPrimary, textAlign: 'center', paddingHorizontal: 16 },
+  tutorialPrompt:{ fontSize: 27, fontFamily: fonts.bold, color: colors.textPrimary, textAlign: 'center', paddingHorizontal: 16 },
   errorText:     { color: colors.incorrect, fontSize: 16, fontFamily: fonts.medium, textAlign: 'center', paddingHorizontal: 16 },
 
   // ── Results layer ─────────────────────────────────────────────
