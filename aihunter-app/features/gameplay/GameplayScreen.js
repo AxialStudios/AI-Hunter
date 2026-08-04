@@ -3,6 +3,7 @@ import {
   View, Text, Image, Animated, Easing, TouchableOpacity,
   ScrollView, StyleSheet, Dimensions, ActivityIndicator,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Feather } from '@expo/vector-icons';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +13,7 @@ import { consumeCachedTask, prefetchNextTask } from '../../lib/taskCache';
 import { useAuth } from '../../context/AuthContext';
 import { useHaptics } from '../../context/HapticsContext';
 import { colors, fonts, radius } from '../../constants/theme';
+import TutorialOverlay from './TutorialOverlay';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const CARD_W = Math.floor((SW - 32 - 10) / 2);
@@ -43,6 +45,10 @@ export default function GameplayScreen() {
   const [leftPctDisplay,  setLeftPctDisplay]  = useState(0);
   const [rightPctDisplay, setRightPctDisplay] = useState(0);
   const startTime                   = useRef(Date.now());
+
+  // null = not yet loaded from storage; 0 = complete; 1/2/3 = active step
+  const [tutorialStep, setTutorialStep] = useState(null);
+  const [imagesReady,  setImagesReady]  = useState(false);
 
   const [showTells, setShowTells] = useState(false);
   const [zoomTell,    setZoomTell]    = useState(null);
@@ -363,6 +369,28 @@ export default function GameplayScreen() {
 
   useFocusEffect(useCallback(() => { fetchTask(); }, []));
 
+  useEffect(() => {
+    AsyncStorage.getItem('ai_hunter_tutorial_done').then(val => {
+      setTutorialStep(val ? 0 : 1);
+    });
+  }, []);
+
+  // Step 2 → 3: when result arrives (user confirmed during tutorial), schedule the tells card
+  useEffect(() => {
+    if (!result || tutorialStep !== 2) return;
+    const t = setTimeout(() => setTutorialStep(3), 1500);
+    return () => clearTimeout(t);
+  }, [result, tutorialStep]);
+
+  async function advanceTutorial() {
+    if (tutorialStep === 1) {
+      setTutorialStep(2);
+    } else if (tutorialStep === 3) {
+      await AsyncStorage.setItem('ai_hunter_tutorial_done', '1');
+      setTutorialStep(0);
+    }
+  }
+
   async function fetchTask() {
     fastTransition.current = false;
     setNextTask(null);
@@ -374,6 +402,7 @@ export default function GameplayScreen() {
     setSelectedSide(null);
     setInspectSide(null);
     setShowTells(false);
+    setImagesReady(false);
 
     cardKey.current += 1;
     loadCount.current = 0;
@@ -426,6 +455,7 @@ export default function GameplayScreen() {
   function handleImageLoad() {
     loadCount.current += 1;
     if (loadCount.current === 2) {
+      setImagesReady(true);
       // Both images rendered — start prefetching the next card immediately so
       // the full gameplay duration (typically 3–20 s) is available for download
       // and decode before the user taps Next Pair.
@@ -703,6 +733,12 @@ export default function GameplayScreen() {
 
             {/* Bottom section: flex fills rest, confirm button at bottom */}
             <View style={styles.playingBottom}>
+              {tutorialStep === 2 && selectedSide && (
+                <View style={styles.tutZoomHint}>
+                  <Feather name="zoom-in" size={14} color={colors.textSecondary} />
+                  <Text style={styles.tutZoomText}>Tap ↗ on the image to zoom in and inspect</Text>
+                </View>
+              )}
               <View style={styles.confirmContainer}>
                 <TouchableOpacity
                   style={[styles.confirmBtn, (!selectedSide || phase !== 'playing') && { opacity: 0 }]}
@@ -867,6 +903,14 @@ export default function GameplayScreen() {
           </ScrollView>
         </Animated.View>
 
+      {/* ── TUTORIAL OVERLAY ── above game layers, below inspect/zoom modals ── */}
+      <TutorialOverlay
+        step={tutorialStep === 1 && imagesReady && phase === 'playing' ? 1
+            : tutorialStep === 3 ? 3
+            : null}
+        onDismiss={advanceTutorial}
+      />
+
       {/* ── ZOOM OVERLAY ─ always in native layer so image stays GPU-composited ── */}
       <View
         style={[StyleSheet.absoluteFillObject, styles.modalContainer, { paddingTop: insets.top, opacity: zoomTell ? 1 : 0.001 }]}
@@ -1012,6 +1056,8 @@ const styles = StyleSheet.create({
   image:                { width: '100%', height: '100%' },
   fill:                 { position: 'absolute', bottom: 0, left: 0, right: 0 },
   zoomIconBtn:          { position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 14, padding: 6 },
+  tutZoomHint:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingBottom: 14 },
+  tutZoomText:          { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary },
   confirmContainer:     { paddingHorizontal: 16, paddingBottom: 12 },
   confirmBtn:           { backgroundColor: colors.textPrimary, paddingVertical: 18, borderRadius: radius.pill, alignItems: 'center' },
   confirmBtnText:       { color: colors.bg, fontSize: 17, fontFamily: fonts.bold },

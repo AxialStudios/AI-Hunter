@@ -16,7 +16,7 @@ import { HapticsProvider } from './context/HapticsContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ThesisScreen from './features/onboarding/ThesisScreen';
 import OnboardingScreen from './features/onboarding/OnboardingScreen';
-import GameplayScreen from './features/gameplay/GameplayScreen';
+import MainTabs from './navigation/MainTabs';
 
 const Stack = createNativeStackNavigator();
 
@@ -59,7 +59,7 @@ function AppNavigator() {
       >
         <Stack.Screen name="Thesis"     component={ThesisScreen} />
         <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-        <Stack.Screen name="Gameplay"   component={GameplayScreen} />
+        <Stack.Screen name="Main"       component={MainTabs} />
       </Stack.Navigator>
     </NavigationContainer>
   );

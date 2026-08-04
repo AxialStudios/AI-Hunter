@@ -11,30 +11,30 @@ import { colors, fonts, radius } from '../../constants/theme';
 import { Feather } from '@expo/vector-icons';
 
 const AGE_OPTIONS = [
-  { value: 'Under 13', label: 'Under 13', emoji: '🧒' },
-  { value: '13–17',    label: '13–17',    emoji: '🎒' },
-  { value: '18–24',    label: '18–24',    emoji: '🎓' },
-  { value: '25–34',    label: '25–34',    emoji: '💼' },
-  { value: '35–44',    label: '35–44',    emoji: '🏠' },
-  { value: '45–54',    label: '45–54',    emoji: '⭐' },
-  { value: '55+',      label: '55+',      emoji: '🌟' },
+  { value: 'Under 13', label: 'Under 13' },
+  { value: '13–17',    label: '13–17'    },
+  { value: '18–24',    label: '18–24'    },
+  { value: '25–34',    label: '25–34'    },
+  { value: '35–44',    label: '35–44'    },
+  { value: '45–54',    label: '45–54'    },
+  { value: '55+',      label: '55+'      },
 ];
 
 const REGION_OPTIONS = [
-  { value: 'North America',       label: 'North America',       emoji: '🌎' },
-  { value: 'Latin America',       label: 'Latin America',       emoji: '🌮' },
-  { value: 'Europe',              label: 'Europe',              emoji: '🏰' },
-  { value: 'Africa',              label: 'Africa',              emoji: '🌍' },
-  { value: 'Middle East',         label: 'Middle East',         emoji: '🌙' },
-  { value: 'South Asia',          label: 'South Asia',          emoji: '🕌' },
-  { value: 'East Asia / Pacific', label: 'East Asia / Pacific', emoji: '🌏' },
-  { value: 'Other',               label: 'Other',               emoji: '🌐' },
+  { value: 'North America',       label: 'North America'       },
+  { value: 'Latin America',       label: 'Latin America'       },
+  { value: 'Europe',              label: 'Europe'              },
+  { value: 'Africa',              label: 'Africa'              },
+  { value: 'Middle East',         label: 'Middle East'         },
+  { value: 'South Asia',          label: 'South Asia'          },
+  { value: 'East Asia / Pacific', label: 'East Asia / Pacific' },
+  { value: 'Other',               label: 'Other'               },
 ];
 
 const FLUENCY_OPTIONS = [
-  { value: 'novice',       label: 'Novice',       sub: 'New to AI-generated images',     emoji: '👀' },
-  { value: 'intermediate', label: 'Intermediate', sub: 'Seen a fair amount',              emoji: '🔍' },
-  { value: 'expert',       label: 'Expert',       sub: 'Work with or study AI images',   emoji: '🧠' },
+  { value: 'novice',       label: 'Beginner',     sub: 'New to AI-generated images'   },
+  { value: 'intermediate', label: 'Intermediate', sub: 'Seen a fair amount'            },
+  { value: 'expert',       label: 'Expert',       sub: 'Work with or study AI images' },
 ];
 
 const STEPS = [
@@ -80,7 +80,7 @@ export default function OnboardingScreen({ navigation }) {
     });
     setSaving(false);
     if (upsertError) { setError(upsertError.message); return; }
-    navigation.navigate('Gameplay');
+    navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
   }
 
   const current = STEPS[step];
@@ -117,7 +117,6 @@ export default function OnboardingScreen({ navigation }) {
           {current.options.map(opt => (
             <OptionRow
               key={opt.value}
-              emoji={opt.emoji}
               label={opt.label}
               sub={opt.sub}
               selected={stepValue === opt.value}
@@ -160,19 +159,18 @@ export default function OnboardingScreen({ navigation }) {
   );
 }
 
-function OptionRow({ emoji, label, sub, selected, onPress }) {
+function OptionRow({ label, sub, selected, onPress }) {
   return (
     <TouchableOpacity
       style={[styles.optionRow, selected && styles.optionRowSelected]}
       onPress={onPress}
       activeOpacity={0.75}
     >
-      <Text style={styles.optionEmoji}>{emoji}</Text>
-      <View style={{ flex: 1 }}>
+      <View style={styles.optionTextBlock}>
         <Text style={[styles.optionLabel, selected && styles.optionLabelSelected]}>{label}</Text>
         {sub ? <Text style={styles.optionSub}>{sub}</Text> : null}
       </View>
-      {selected && <Feather name="check" size={19} color={colors.textPrimary} />}
+      {selected && <Feather name="check" size={19} color={colors.textPrimary} style={styles.optionCheck} />}
     </TouchableOpacity>
   );
 }
@@ -195,15 +193,16 @@ const styles = StyleSheet.create({
 
   pillsContent:       { paddingHorizontal: 20, paddingBottom: 24 },
   optionList:         { gap: 10, marginBottom: 16 },
-  optionRow:          { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 16, paddingHorizontal: 18, borderRadius: radius.pill, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface },
+  optionRow:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, paddingVertical: 16, paddingHorizontal: 18, borderRadius: radius.pill, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface },
   optionRowSelected:  { borderColor: colors.textPrimary },
-  optionEmoji:        { fontSize: 24, width: 32, textAlign: 'center' },
-  optionLabel:        { fontSize: 17, fontFamily: fonts.semiBold, color: '#CCCCCC' },
+  optionTextBlock:    { alignItems: 'center' },
+  optionLabel:        { fontSize: 17, fontFamily: fonts.semiBold, color: '#EBEBEB', textAlign: 'center' },
   optionLabelSelected:{ color: colors.textPrimary },
-  optionSub:          { fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary, marginTop: 2 },
+  optionSub:          { fontSize: 14, fontFamily: fonts.regular, color: '#AAAAAA', marginTop: 2, textAlign: 'center' },
+  optionCheck:        { position: 'absolute', right: 18 },
 
   ageGate:            { color: colors.incorrect, fontFamily: fonts.semiBold, fontSize: 14, textAlign: 'center' },
-  consent:            { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 20, textAlign: 'center' },
+  consent:            { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 17, textAlign: 'center' },
   errorText:          { color: colors.incorrect, fontFamily: fonts.medium, fontSize: 13, textAlign: 'center' },
 
   footer:             { padding: 20, paddingBottom: 16, gap: 12 },
