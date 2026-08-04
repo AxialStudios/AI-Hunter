@@ -942,7 +942,7 @@ export default function GameplayScreen() {
           </View>
         </GestureDetector>
 
-        <View style={[styles.modalFooter, { paddingBottom: insets.bottom + 72 }]}>
+        <View style={[styles.modalFooter, { paddingBottom: insets.bottom + 32 }]}>
           <Text style={styles.modalDescription}>{zoomTellRef.current?.description}</Text>
           <TouchableOpacity style={styles.modalDoneBtn} onPress={() => { light(); setZoomTell(null); }}>
             <Text style={styles.modalDoneText}>Done</Text>
@@ -1104,7 +1104,7 @@ const styles = StyleSheet.create({
   modalTitle:       { flex: 1, fontSize: 17, fontFamily: fonts.bold, color: colors.textPrimary, textAlign: 'center' },
   modalImageArea:   { width: SW, height: MODAL_IMG_H, overflow: 'hidden', alignSelf: 'center' },
   modalImage:       { width: SW, height: MODAL_IMG_H },
-  modalFooter:      { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32, gap: 20 },
+  modalFooter:      { flex: 1, justifyContent: 'flex-end', alignItems: 'center', paddingHorizontal: 32, gap: 20 },
   modalDescription: { fontSize: 18, fontFamily: fonts.regular, color: colors.textPrimary, lineHeight: 27, textAlign: 'center' },
   modalDoneBtn:     { backgroundColor: colors.surface, paddingVertical: 14, paddingHorizontal: 40, borderRadius: radius.pill },
   modalDoneText:    { fontSize: 15, fontFamily: fonts.semiBold, color: colors.textPrimary },
