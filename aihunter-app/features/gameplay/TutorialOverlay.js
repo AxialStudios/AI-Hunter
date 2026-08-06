@@ -25,17 +25,13 @@ export default function TutorialOverlay({ step, onAdvance, selectedSide }) {
 
 function CinematicScreen({ onAdvance, insets }) {
   const opacity   = useRef(new Animated.Value(0)).current;
-  const cardTY    = useRef(new Animated.Value(40)).current;
-  const textTY    = useRef(new Animated.Value(20)).current;
+  const textTY    = useRef(new Animated.Value(24)).current;
   const leaveAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.sequence([
       Animated.timing(opacity, { toValue: 1, duration: 240, useNativeDriver: true }),
-      Animated.parallel([
-        Animated.spring(textTY, { toValue: 0, tension: 65, friction: 13, useNativeDriver: true }),
-        Animated.spring(cardTY, { toValue: 0, tension: 60, friction: 14, useNativeDriver: true }),
-      ]),
+      Animated.spring(textTY, { toValue: 0, tension: 65, friction: 13, useNativeDriver: true }),
     ]).start();
   }, []);
 
@@ -46,33 +42,17 @@ function CinematicScreen({ onAdvance, insets }) {
   return (
     <Animated.View style={[StyleSheet.absoluteFillObject, styles.cinematicBg, { opacity: leaveAnim }]}>
       <Animated.View
-        style={[styles.cinematicInner, { opacity, paddingTop: insets.top + 52, paddingBottom: insets.bottom + 44 }]}
+        style={[styles.cinematicInner, { opacity, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 44 }]}
       >
-        {/* Main copy — at the top, mirroring where the game prompt lives */}
-        <Animated.View style={[styles.copyBlock, { transform: [{ translateY: textTY }] }]}>
-          <Text style={styles.cinHeading}>One is real.{'\n'}One is AI.</Text>
-          <Text style={styles.cinSub}>
-            Each round you'll see a pair of images.{'\n'}Tap the one you think is real.
-          </Text>
-        </Animated.View>
+        <View style={styles.cinCopyArea}>
+          <Animated.View style={[styles.copyBlock, { transform: [{ translateY: textTY }] }]}>
+            <Text style={styles.cinHeading}>One is real.{'\n'}One is AI.</Text>
+            <Text style={styles.cinSub}>
+              Each round you'll see a pair of images.{'\n'}Tap the one you think is real.
+            </Text>
+          </Animated.View>
+        </View>
 
-        {/* Ghost card pair — with REAL / AI labels below, matching game results UI */}
-        <Animated.View style={[styles.ghostRow, { transform: [{ translateY: cardTY }] }]}>
-          <View style={styles.ghostCardCol}>
-            <View style={[styles.ghostCard, styles.ghostCardReal]}>
-              <Feather name="image" size={32} color="#505050" />
-            </View>
-            <Text style={styles.ghostCardTag}>REAL</Text>
-          </View>
-          <View style={styles.ghostCardCol}>
-            <View style={[styles.ghostCard, styles.ghostCardAI]}>
-              <Feather name="cpu" size={32} color="#505050" />
-            </View>
-            <Text style={styles.ghostCardTag}>AI</Text>
-          </View>
-        </Animated.View>
-
-        {/* CTA */}
         <TouchableOpacity style={styles.cinBtn} onPress={handleReady} activeOpacity={0.85}>
           <Text style={styles.cinBtnText}>I'm ready</Text>
           <Feather name="arrow-right" size={18} color={colors.bg} style={{ marginLeft: 8 }} />
@@ -83,18 +63,22 @@ function CinematicScreen({ onAdvance, insets }) {
 }
 
 function PickOverlay({ insets }) {
+  const fadeIn = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeIn, { toValue: 1, duration: 220, useNativeDriver: true }).start();
+  }, []);
+
   const imageTop    = insets.top + IMAGE_TOP_BASE;
   const imageBottom = imageTop + CARD_H;
   const DIM = 'rgba(0,0,0,0.82)';
 
-  // The instruction text lives in GameplayScreen's playingTop (above images),
-  // so we leave that area undimmed and only dim the sides + bottom.
   return (
-    <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
+    <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: fadeIn }]} pointerEvents="box-none">
       <View style={{ position: 'absolute', top: imageTop,    left: 0,  width: 16, height: CARD_H, backgroundColor: DIM }} pointerEvents="none" />
       <View style={{ position: 'absolute', top: imageTop,    right: 0, width: 16, height: CARD_H, backgroundColor: DIM }} pointerEvents="none" />
       <View style={{ position: 'absolute', top: imageBottom, left: 0,  right: 0,  bottom: 0,      backgroundColor: DIM }} pointerEvents="none" />
-    </View>
+    </Animated.View>
   );
 }
 
@@ -161,17 +145,17 @@ const styles = StyleSheet.create({
   cinematicInner: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 24,
   },
 
-  copyBlock: { alignItems: 'center', gap: 16 },
+  cinCopyArea: { flex: 1, justifyContent: 'center' },
+  copyBlock: { alignItems: 'center', gap: 20 },
   cinHeading: {
-    fontSize: 40,
+    fontSize: 44,
     fontFamily: fonts.bold,
     color: colors.textPrimary,
     textAlign: 'center',
-    lineHeight: 48,
+    lineHeight: 52,
   },
   cinSub: {
     fontSize: 21,
@@ -179,26 +163,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     textAlign: 'center',
     lineHeight: 30,
-  },
-
-  ghostRow: { flexDirection: 'row', gap: 10 },
-  ghostCardCol: { alignItems: 'center', gap: 10 },
-  ghostCard: {
-    width: CARD_W,
-    height: GHOST_H,
-    borderRadius: radius.lg,
-    borderWidth: 1.5,
-    borderColor: '#383838',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ghostCardReal: { backgroundColor: '#1E1E1E' },
-  ghostCardAI:   { backgroundColor: '#1A1A1A' },
-  ghostCardTag: {
-    fontSize: 11,
-    fontFamily: fonts.semiBold,
-    color: '#888',
-    letterSpacing: 2.5,
+    opacity: 0.75,
   },
 
   cinBtn: {

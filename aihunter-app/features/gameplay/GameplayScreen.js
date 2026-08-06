@@ -367,8 +367,9 @@ export default function GameplayScreen() {
   const verdictOpacity = useRef(new Animated.Value(0)).current;
   const labelsOpacity  = useRef(new Animated.Value(0)).current;
   const bottomOpacity  = useRef(new Animated.Value(0)).current;
-  const shimmerAnims   = useRef(Array.from({ length: 5 }, () => new Animated.Value(0))).current;
-  const tellsPulse     = useRef(new Animated.Value(0)).current;
+  const shimmerAnims        = useRef(Array.from({ length: 5 }, () => new Animated.Value(0))).current;
+  const tellsPulse          = useRef(new Animated.Value(0)).current;
+  const tutorialPromptAnim  = useRef(new Animated.Value(0)).current;
 
   useFocusEffect(useCallback(() => { fetchTask(); }, []));
 
@@ -392,6 +393,14 @@ export default function GameplayScreen() {
   useEffect(() => {
     if (tutorialStep === 'confirm' && result) setTutorialStep('tells');
   }, [result]);
+
+  // Fade in tutorial prompt text when step becomes 'pick' or 'zoom' (avoids flash)
+  useEffect(() => {
+    if (tutorialStep === 'pick' || tutorialStep === 'zoom') {
+      tutorialPromptAnim.setValue(0);
+      Animated.timing(tutorialPromptAnim, { toValue: 1, duration: 220, delay: 60, useNativeDriver: true }).start();
+    }
+  }, [tutorialStep]);
 
   // 'tells': auto-expand the tells section + pulse ring
   useEffect(() => {
@@ -683,9 +692,14 @@ export default function GameplayScreen() {
                 so the imageRow sits at the same Y in both playing and results */}
             <View style={styles.playingTop}>
               {tutorialStep === 'pick' ? (
-                <Text style={styles.tutorialPrompt}>Tap the image you think is real</Text>
+                <Animated.Text style={[styles.tutorialPrompt, { opacity: tutorialPromptAnim }]}>
+                  Tap the image you think is real
+                </Animated.Text>
               ) : tutorialStep === 'zoom' ? (
-                <Text style={styles.tutorialPrompt}>Zoom in to inspect it</Text>
+                <Animated.View style={[{ alignItems: 'center', gap: 6 }, { opacity: tutorialPromptAnim }]}>
+                  <Text style={styles.tutorialPrompt}>Zoom in to inspect it</Text>
+                  <Text style={styles.tutorialHint}>Tap the icon — or pinch to zoom</Text>
+                </Animated.View>
               ) : phase === 'loading' && !task ? (
                 <ActivityIndicator color={colors.textPrimary} />
               ) : loadError ? (
@@ -844,19 +858,24 @@ export default function GameplayScreen() {
             </View>
 
             {result && (
-              <Animated.Text style={[styles.totalVotes, { marginTop: 14, opacity: bottomOpacity }]}>{result.total_votes.toLocaleString()} total votes</Animated.Text>
+              tutorialStep === 'tells' ? (
+                <Animated.View style={[styles.tutorialVotesBox, { marginTop: 14, opacity: bottomOpacity }]}>
+                  <Animated.View style={[StyleSheet.absoluteFillObject, styles.tutorialVotesBorder, { opacity: tellsPulse }]} pointerEvents="none" />
+                  <Text style={styles.totalVotes}>{result.total_votes.toLocaleString()} total votes</Text>
+                  <Text style={styles.tutorialVotesHint}>This shows how all players voted</Text>
+                </Animated.View>
+              ) : (
+                <Animated.Text style={[styles.totalVotes, { marginTop: 14, opacity: bottomOpacity }]}>
+                  {result.total_votes.toLocaleString()} total votes
+                </Animated.Text>
+              )
             )}
 
             {/* Tells + next pair */}
             {result && (
               <Animated.View style={[styles.bottomContent, { marginTop: 14, opacity: bottomOpacity }]}>
-                {/* Tutorial hint during tells step */}
                 {tutorialStep === 'tells' && (
-                  <View style={styles.tutorialTellsHint}>
-                    <Text style={styles.tutorialTellsHintText}>
-                      {'Those percentages show how everyone voted.\nTap any tell below to explore it.'}
-                    </Text>
-                  </View>
+                  <Text style={styles.tutorialTellsPrompt}>Tap any tell below to explore it</Text>
                 )}
 
                 {/* Side-by-side action row */}
@@ -876,18 +895,6 @@ export default function GameplayScreen() {
                 {/* Tells section: outer collapses to height 0 (not unmounted) so the
                     Image stays mounted and fully decoded — no flash when opening. */}
                 <View style={[styles.tellsSection, !showTells && styles.collapsedTells]}>
-                  {tutorialStep === 'tells' && showTells && (
-                    <Animated.View
-                      pointerEvents="none"
-                      style={{
-                        ...StyleSheet.absoluteFillObject,
-                        borderRadius: radius.md,
-                        borderWidth: 2,
-                        borderColor: '#fff',
-                        opacity: tellsPulse,
-                      }}
-                    />
-                  )}
                   {showTells && <Text style={styles.tellsHeading}>The AI image</Text>}
 
                   <View
@@ -941,6 +948,18 @@ export default function GameplayScreen() {
                         }}
                         activeOpacity={0.72}
                       >
+                        {tutorialStep === 'tells' && (
+                          <Animated.View
+                            pointerEvents="none"
+                            style={{
+                              ...StyleSheet.absoluteFillObject,
+                              borderRadius: radius.md,
+                              borderWidth: 1.5,
+                              borderColor: '#fff',
+                              opacity: tellsPulse,
+                            }}
+                          />
+                        )}
                         <View style={styles.tellItemHeader}>
                           <View style={styles.tellBadge}>
                             <Text style={styles.tellBadgeNum}>{i + 1}</Text>
@@ -1091,7 +1110,8 @@ const styles = StyleSheet.create({
   playingTop:    { height: 164, justifyContent: 'flex-end', paddingBottom: 14 },
   playingBottom: { flex: 1, justifyContent: 'flex-end' },
   prompt:        { fontSize: 23, fontFamily: fonts.semiBold, color: colors.textPrimary, textAlign: 'center', paddingHorizontal: 16 },
-  tutorialPrompt:{ fontSize: 27, fontFamily: fonts.bold, color: colors.textPrimary, textAlign: 'center', paddingHorizontal: 16 },
+  tutorialPrompt: { fontSize: 27, fontFamily: fonts.bold, color: colors.textPrimary, textAlign: 'center', paddingHorizontal: 16 },
+  tutorialHint:   { fontSize: 14, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.55)', textAlign: 'center' },
   errorText:     { color: colors.incorrect, fontSize: 16, fontFamily: fonts.medium, textAlign: 'center', paddingHorizontal: 16 },
 
   // ── Results layer ─────────────────────────────────────────────
@@ -1153,8 +1173,10 @@ const styles = StyleSheet.create({
   nextBtn:     { flex: 1, backgroundColor: colors.textPrimary, paddingVertical: 18, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   nextBtnText: { color: colors.bg, fontSize: 17, fontFamily: fonts.bold },
 
-  tutorialTellsHint:     { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: radius.md, paddingVertical: 12, paddingHorizontal: 16, alignItems: 'center' },
-  tutorialTellsHintText: { fontSize: 15, fontFamily: fonts.medium, color: colors.textPrimary, textAlign: 'center', lineHeight: 22 },
+  tutorialTellsPrompt: { fontSize: 14, fontFamily: fonts.medium, color: 'rgba(255,255,255,0.55)', textAlign: 'center' },
+  tutorialVotesBox:    { alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 22, borderRadius: 20, alignItems: 'center', gap: 2 },
+  tutorialVotesBorder: { borderRadius: 20, borderWidth: 1.5, borderColor: '#fff' },
+  tutorialVotesHint:   { fontSize: 11, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.45)', textAlign: 'center', marginTop: 2 },
 
   // ── Zoom modal ────────────────────────────────────────────────
   modalContainer:   { flex: 1, backgroundColor: '#000' },
