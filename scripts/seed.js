@@ -1,25 +1,36 @@
-// scripts/seed.js — uploads images to Supabase storage and seeds the tasks table.
+// scripts/seed.js — converts images to WebP, uploads to Cloudflare R2, and seeds the tasks table.
 // Safe to run multiple times: skips any pair whose source_attribution already exists.
 //
 // Usage:
 //   cd scripts && npm install
+//   R2_ACCOUNT_ID=... R2_ACCESS_KEY=... R2_SECRET_KEY=... R2_PUBLIC_URL=https://pub-xxx.r2.dev \
 //   SUPABASE_URL=https://... SUPABASE_SERVICE_ROLE_KEY=... node seed.js
 
+const { S3Client, PutObjectCommand, HeadObjectCommand } = require('@aws-sdk/client-s3');
 const { createClient } = require('@supabase/supabase-js');
-const fs   = require('fs');
-const path = require('path');
+const sharp = require('sharp');
+const fs    = require('fs');
+const path  = require('path');
 
+const R2_ACCOUNT_ID            = process.env.R2_ACCOUNT_ID;
+const R2_ACCESS_KEY            = process.env.R2_ACCESS_KEY;
+const R2_SECRET_KEY            = process.env.R2_SECRET_KEY;
+const R2_BUCKET                = process.env.R2_BUCKET || 'aihunter-images';
+const R2_PUBLIC_URL            = process.env.R2_PUBLIC_URL;
 const SUPABASE_URL             = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.error('Missing env vars. Run:');
-  console.error('  SUPABASE_URL=https://... SUPABASE_SERVICE_ROLE_KEY=... node seed.js');
-  process.exit(1);
+for (const v of ['R2_ACCOUNT_ID','R2_ACCESS_KEY','R2_SECRET_KEY','R2_PUBLIC_URL','SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY']) {
+  if (!process.env[v]) { console.error(`Missing env var: ${v}`); process.exit(1); }
 }
 
+const s3 = new S3Client({
+  region: 'auto',
+  endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: { accessKeyId: R2_ACCESS_KEY, secretAccessKey: R2_SECRET_KEY },
+});
+
 const supabase   = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-const BUCKET     = 'task-images';
 const IMAGES_DIR = path.join(__dirname, '..', 'Assets', 'seed-images');
 
 // Difficulty spread across 15 cards:
@@ -199,40 +210,32 @@ const TASKS = [
   },
 ];
 
-async function ensureBucket() {
-  const { data: buckets, error } = await supabase.storage.listBuckets();
-  if (error) throw new Error(`listBuckets failed: ${error.message}`);
-  if (!buckets.some(b => b.name === BUCKET)) {
-    const { error: createErr } = await supabase.storage.createBucket(BUCKET, { public: true });
-    if (createErr) throw new Error(`createBucket failed: ${createErr.message}`);
-    console.log(`Created storage bucket: ${BUCKET}`);
-  }
-}
-
 async function uploadImage(pair, side, ext) {
-  const filename    = `${pair}_${side}.${ext}`;
-  const storagePath = `${pair}/${side}.${ext}`;
-  const localPath   = path.join(IMAGES_DIR, filename);
+  const localPath = path.join(IMAGES_DIR, `${pair}_${side}.${ext}`);
+  const r2Key     = `${pair}/${side}.webp`;
 
-  const { data: listed } = await supabase.storage.from(BUCKET).list(pair);
-  if (listed?.some(f => f.name === `${side}.${ext}`)) {
-    console.log(`    ↩ already uploaded: ${storagePath}`);
-  } else {
-    const buffer      = fs.readFileSync(localPath);
-    const contentType = ext === 'png' ? 'image/png' : 'image/jpeg';
-    const { error }   = await supabase.storage.from(BUCKET).upload(storagePath, buffer, { contentType });
-    if (error) throw new Error(`Upload failed for ${filename}: ${error.message}`);
-    console.log(`    ✓ uploaded: ${storagePath}`);
+  try {
+    await s3.send(new HeadObjectCommand({ Bucket: R2_BUCKET, Key: r2Key }));
+    console.log(`    ↩ already in R2: ${r2Key}`);
+  } catch {
+    const webpBuffer = await sharp(localPath)
+      .resize({ width: 800, withoutEnlargement: true })
+      .webp({ quality: 82 })
+      .toBuffer();
+
+    await s3.send(new PutObjectCommand({
+      Bucket: R2_BUCKET,
+      Key: r2Key,
+      Body: webpBuffer,
+      ContentType: 'image/webp',
+    }));
+    console.log(`    ✓ uploaded: ${r2Key}`);
   }
 
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(storagePath);
-  return data.publicUrl;
+  return `${R2_PUBLIC_URL}/${r2Key}`;
 }
 
 async function run() {
-  console.log('Checking storage bucket...');
-  await ensureBucket();
-
   for (const task of TASKS) {
     console.log(`\n${task.pair}...`);
 

@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Hunter — Tell Coordinate Picker</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0d0d0d;
+    color: #f0f0f0;
+    min-height: 100vh;
+  }
+
+  /* ── Setup screen ── */
+  #setup {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 32px;
+  }
+  #setup h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+  #setup p  { color: #888; margin-bottom: 32px; text-align: center; max-width: 460px; line-height: 1.5; }
+  #setup label { font-size: 13px; color: #888; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px; display: block; }
+  #setup input {
+    width: 400px; padding: 12px 16px; background: #1a1a1a; border: 1px solid #333;
+    border-radius: 10px; color: #f0f0f0; font-size: 15px; outline: none;
+    margin-bottom: 24px;
+  }
+  #setup input:focus { border-color: #555; }
+  #setup button {
+    padding: 14px 36px; background: #f0f0f0; color: #0d0d0d;
+    border: none; border-radius: 50px; font-size: 15px; font-weight: 600;
+    cursor: pointer;
+  }
+  #setup button:hover { background: #e0e0e0; }
+
+  /* ── Picker screen ── */
+  #picker { display: none; }
+
+  .picker-header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 16px 24px; background: #111; border-bottom: 1px solid #222;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .pair-label { font-size: 13px; color: #666; }
+  .pair-title { font-size: 18px; font-weight: 700; }
+  .tell-counter { margin-left: auto; font-size: 13px; color: #666; }
+  .progress-bar {
+    height: 3px; background: #222; position: sticky; top: 57px; z-index: 10;
+  }
+  .progress-fill { height: 100%; background: #f0f0f0; transition: width .3s ease; }
+
+  .picker-body {
+    display: grid; grid-template-columns: 1fr 380px;
+    min-height: calc(100vh - 60px);
+  }
+
+  /* ── Image panel ── */
+  .image-panel {
+    padding: 24px; display: flex; flex-direction: column; align-items: center; gap: 16px;
+    background: #080808;
+  }
+  .image-container {
+    position: relative; cursor: crosshair;
+    border-radius: 12px; overflow: hidden;
+    border: 1px solid #222;
+    max-width: 100%;
+  }
+  .image-container img {
+    display: block; max-width: 100%; height: auto; user-select: none;
+  }
+  .circle {
+    position: absolute; border-radius: 50%;
+    border: 2.5px solid #fff;
+    background: rgba(255,255,255,0.15);
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none;
+    font-size: 14px; font-weight: 700; color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,.8);
+    transform: translate(-50%, -50%);
+  }
+  .circle.placed    { border-color: #6ee75b; background: rgba(110,231,91,0.15); }
+  .circle.active    { border-color: #f0f0f0; background: rgba(255,255,255,0.18); }
+  .circle.previewing { border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.07); }
+
+  .image-hint {
+    font-size: 13px; color: #555; text-align: center;
+  }
+
+  /* ── Controls panel ── */
+  .controls-panel {
+    padding: 28px; background: #111; border-left: 1px solid #1e1e1e;
+    display: flex; flex-direction: column; gap: 20px;
+  }
+
+  .tell-info {
+    background: #1a1a1a; border-radius: 12px; padding: 18px;
+    border: 1px solid #2a2a2a;
+  }
+  .tell-num {
+    font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: #666; margin-bottom: 6px;
+  }
+  .tell-name { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .tell-desc { font-size: 14px; color: #888; line-height: 1.5; }
+
+  .radius-control label {
+    font-size: 13px; color: #666; display: flex; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .radius-control input[type=range] {
+    width: 100%; accent-color: #f0f0f0;
+    cursor: pointer;
+  }
+
+  .placed-list { display: flex; flex-direction: column; gap: 8px; }
+  .placed-item {
+    font-size: 13px; display: flex; align-items: center; gap: 10px;
+    color: #888;
+  }
+  .placed-item.done { color: #6ee75b; }
+  .placed-dot {
+    width: 22px; height: 22px; border-radius: 50%; border: 2px solid #333;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; flex-shrink: 0;
+  }
+  .placed-item.done .placed-dot { border-color: #6ee75b; color: #6ee75b; }
+  .placed-item.active .placed-dot { border-color: #fff; color: #fff; }
+
+  .confirm-btn {
+    padding: 16px; background: #f0f0f0; color: #0d0d0d;
+    border: none; border-radius: 12px; font-size: 16px; font-weight: 700;
+    cursor: pointer; transition: background .15s;
+  }
+  .confirm-btn:hover:not(:disabled) { background: #ddd; }
+  .confirm-btn:disabled {
+    background: #222; color: #444; cursor: not-allowed;
+  }
+
+  .skip-btn {
+    padding: 12px; background: transparent; color: #555;
+    border: 1px solid #2a2a2a; border-radius: 12px; font-size: 14px;
+    cursor: pointer; transition: color .15s, border-color .15s;
+  }
+  .skip-btn:hover { color: #888; border-color: #444; }
+
+  /* ── Export screen ── */
+  #export-screen {
+    display: none; padding: 40px; max-width: 860px; margin: 0 auto;
+  }
+  #export-screen h2 { font-size: 26px; font-weight: 700; margin-bottom: 8px; }
+  #export-screen p  { color: #888; line-height: 1.5; margin-bottom: 24px; }
+
+  .export-step {
+    background: #111; border: 1px solid #222; border-radius: 12px;
+    padding: 20px; margin-bottom: 20px;
+  }
+  .export-step h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+  .export-step p  { font-size: 14px; color: #888; margin-bottom: 14px; line-height: 1.5; }
+  .export-step pre {
+    background: #0a0a0a; border: 1px solid #2a2a2a; border-radius: 8px;
+    padding: 16px; overflow-x: auto; font-size: 12px; color: #aaa;
+    font-family: 'SF Mono', 'Menlo', monospace; max-height: 340px; overflow-y: auto;
+    white-space: pre-wrap; word-break: break-all;
+  }
+  .copy-btn {
+    margin-top: 10px; padding: 10px 20px;
+    background: #1e1e1e; color: #f0f0f0; border: 1px solid #333;
+    border-radius: 8px; font-size: 13px; cursor: pointer;
+  }
+  .copy-btn:hover { background: #2a2a2a; }
+  .copy-btn.copied { border-color: #6ee75b; color: #6ee75b; }
+
+  .restart-btn {
+    padding: 14px 32px; background: transparent; color: #666;
+    border: 1px solid #333; border-radius: 50px; font-size: 14px; cursor: pointer;
+    margin-top: 8px;
+  }
+  .restart-btn:hover { color: #f0f0f0; border-color: #555; }
+</style>
+</head>
+<body>
+
+<!-- SETUP SCREEN -->
+<div id="setup">
+  <h1>Tell Coordinate Picker</h1>
+  <p>Click each tell's location on the AI image. At the end, you'll get SQL to paste into Supabase.</p>
+  <label>Your R2 Public URL (no trailing slash)</label>
+  <input type="text" id="r2url" placeholder="https://pub-abc123.r2.dev" />
+  <button onclick="startPicker()">Start →</button>
+</div>
+
+<!-- PICKER SCREEN -->
+<div id="picker">
+  <div class="picker-header">
+    <div>
+      <div class="pair-label" id="hdr-pair"></div>
+      <div class="pair-title" id="hdr-tell"></div>
+    </div>
+    <div class="tell-counter" id="hdr-counter"></div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+
+  <div class="picker-body">
+    <div class="image-panel">
+      <div class="image-container" id="img-container">
+        <img id="ai-img" src="" alt="AI image" draggable="false" />
+        <!-- circles injected here -->
+      </div>
+      <div class="image-hint" id="img-hint">Click the image to place the circle</div>
+    </div>
+
+    <div class="controls-panel">
+      <div class="tell-info">
+        <div class="tell-num" id="ctrl-num"></div>
+        <div class="tell-name" id="ctrl-name"></div>
+        <div class="tell-desc" id="ctrl-desc"></div>
+      </div>
+
+      <div class="radius-control">
+        <label>
+          Circle size
+          <span id="radius-val">10%</span>
+        </label>
+        <input type="range" id="radius-slider" min="4" max="25" value="10" oninput="onRadiusChange()" />
+      </div>
+
+      <div class="placed-list" id="placed-list"></div>
+
+      <button class="confirm-btn" id="confirm-btn" disabled onclick="confirmTell()">
+        Place &amp; Continue →
+      </button>
+      <button class="skip-btn" onclick="skipTell()">Skip this tell (no circle)</button>
+    </div>
+  </div>
+</div>
+
+<!-- EXPORT SCREEN -->
+<div id="export-screen">
+  <h2>Done! Here's your SQL.</h2>
+  <p>Paste this into the <strong>Supabase SQL Editor</strong> for your project. It updates tell_annotations for all 15 pairs at once.</p>
+
+  <div class="export-step">
+    <h3>Run in Supabase → SQL Editor</h3>
+    <p>Select all, copy, paste into the editor, click Run.</p>
+    <pre id="sql-output"></pre>
+    <button class="copy-btn" id="copy-sql-btn" onclick="copySql()">Copy SQL</button>
+  </div>
+
+  <div class="export-step">
+    <h3>Also update seed.js (optional)</h3>
+    <p>Replace the TASKS array in <code>scripts/seed.js</code> with this so future re-seeds include the coordinates.</p>
+    <pre id="seedjs-output"></pre>
+    <button class="copy-btn" id="copy-seed-btn" onclick="copySeed()">Copy JS</button>
+  </div>
+
+  <button class="restart-btn" onclick="location.reload()">Start over</button>
+</div>
+
+<script>
+// ── Data ──────────────────────────────────────────────────────────────────────
+const TASKS = [
+  { pair: 'pair01', attribution: 'https://unsplash.com/photos/megavalue-store-at-midnight-with-parked-car-i4Ru2xSn0hA',
+    tells: [
+      { label: 'License plate',   description: 'Garbled, unreadable text on the license plate.' },
+      { label: 'Tire metal',      description: "Unevenness in the metal around the car's tires." },
+      { label: 'Generic signage', description: 'Fake store name "Big Mart" instead of a real brand name.' },
+    ]},
+  { pair: 'pair02', attribution: 'https://unsplash.com/photos/modern-glass-skyscrapers-reaching-towards-a-cloudy-sky-GfKvccF9hZo',
+    tells: [
+      { label: 'Window tiling',   description: 'Windows bend into each other like tiles rather than straight glass panes.' },
+      { label: 'Curved lines',    description: 'Lines on the middle building that curves are not straight.' },
+      { label: 'Interior lights', description: 'Interior office lights are inaccurate in placement and brightness.' },
+    ]},
+  { pair: 'pair03', attribution: 'https://unsplash.com/photos/modern-apartment-building-with-glass-balconies-and-brick-facade-qkoP3LPuUJE',
+    tells: [
+      { label: 'Balcony plants',   description: 'Plants in the glass balconies are inaccurate and unnatural-looking.' },
+      { label: 'Glass distortion', description: 'Glass is bending and lines in the top left are not straight.' },
+    ]},
+  { pair: 'pair04', attribution: 'https://unsplash.com/photos/modern-spiral-walkway-with-colorful-railing-xldNAKhPv-E',
+    tells: [
+      { label: 'Corner warping', description: 'Building begins to warp in the outer corners, top left.' },
+      { label: 'Depth of field', description: 'Strange depth of field — some flowers in focus, others inexplicably blurred.' },
+    ]},
+  { pair: 'pair05', attribution: 'https://unsplash.com/photos/rustic-wooden-cabin-with-an-open-window-and-curtains-cXjsQEPXZfQ',
+    tells: [
+      { label: 'Door shadow',      description: 'Inaccurate shadowing on the bottom right door.' },
+      { label: 'Flower artifacts', description: 'Zooming in on the flowers reveals multiple AI-generation artifacts.' },
+    ]},
+  { pair: 'pair06', attribution: 'https://unsplash.com/photos/modern-library-interior-with-bookshelves-and-tables-tT4Dg9AtjhU',
+    tells: [
+      { label: 'Missing Apple logo', description: 'iMacs on the desks have no Apple logo — AI refuses to render real brand marks.' },
+      { label: 'Chair physics',      description: 'White chairs are positioned in a way that would be physically non-functional in real life.' },
+    ]},
+  { pair: 'pair07', attribution: 'https://unsplash.com/photos/black-and-white-modern-buildings-against-a-clear-sky-dH_0UwGY000',
+    tells: [
+      { label: 'Tree warping',       description: 'Street tree on the left bends and warps unnaturally.' },
+      { label: 'Uneven glass lines', description: 'Building on the left has uneven, non-parallel lines between glass panes.' },
+      { label: 'Clumped leaves',     description: 'Dense tree leaves are blurred and clumped rather than distinct.' },
+    ]},
+  { pair: 'pair08', attribution: 'https://unsplash.com/photos/scaffolding-structures-against-a-clear-blue-sky-3CbJkZw9dyU',
+    tells: [
+      { label: 'Metal bars', description: 'Scaffolding metal bars do not remain straight along their full length.' },
+    ]},
+  { pair: 'pair09', attribution: 'https://unsplash.com/photos/city-street-with-elevated-walkway-and-buildings-IhnzaZvtnhU',
+    tells: [
+      { label: 'Text / language', description: 'Inaccurate Korean text and signage throughout the scene.' },
+      { label: 'Tree leaves',     description: 'Leaves on trees blur and clump rather than showing individual leaves.' },
+      { label: 'Distant cars',    description: 'Cars in the distance become warped, merged, and indistinct.' },
+    ]},
+  { pair: 'pair10', attribution: 'https://unsplash.com/photos/sunny-street-with-traditional-brick-houses-and-a-sidewalk-FLY_LNi2L2c',
+    tells: [
+      { label: 'Car logos',      description: 'Car logos and badges are inaccurate or missing.' },
+      { label: 'License plates', description: 'License plate text is illegible or nonsensical.' },
+    ]},
+  { pair: 'pair11', attribution: 'https://unsplash.com/photos/cook-preparing-street-food-in-new-york-CG5YNB8zI60',
+    tells: [
+      { label: 'Uncanny skin',     description: "Uncanny, overly smooth texture on the man's face and ear." },
+      { label: 'Watch distortion', description: "The man's watch is warped and does not look like a real watch." },
+    ]},
+  { pair: 'pair12', attribution: 'https://unsplash.com/photos/west-4th-street-subway-entrance-illuminated-at-night-wLUbUdT90QE',
+    tells: [
+      { label: 'Unformed text', description: 'Numbers and text in the elevator are not fully formed or legible.' },
+      { label: 'Metal bars',    description: 'Metal bars on each side of the elevator cut off abruptly and bend strangely.' },
+    ]},
+  { pair: 'pair13', attribution: 'https://unsplash.com/photos/siena-police-officers-chatting-on-a-busy-street-A0hZsjQkW30',
+    tells: [
+      { label: 'Crowd faces',       description: 'Faces in the crowd are warped, uncanny, and anatomically inaccurate.' },
+      { label: 'Bending buildings', description: 'Background buildings begin to bend and merge into each other.' },
+      { label: "Officer's shoes",   description: "Left officer's shoes point in opposite directions — physically impossible stance." },
+    ]},
+  { pair: 'pair14', attribution: 'https://unsplash.com/photos/woman-in-green-striped-dress-sitting-on-a-harbor-wall-aoinm1-wrs4',
+    tells: [
+      { label: 'Smooth skin',   description: 'Ultra smooth, plastic-looking skin with no natural pores or texture variation.' },
+      { label: 'Image quality', description: 'General image quality feels artificial and over-processed.' },
+    ]},
+  { pair: 'pair15', attribution: 'https://unsplash.com/photos/woman-in-red-top-with-red-nails-gazing-upwards-xR1BT9AM_uc',
+    tells: [
+      { label: 'Smooth skin', description: 'Overly smooth, airbrushed skin lacking natural pores or detail.' },
+      { label: 'Nose shape',  description: 'Nose is uncanny and wrong-looking in its proportions.' },
+      { label: 'Eyelashes',   description: 'Eyelashes start and stop inaccurately on the left eyelid.' },
+    ]},
+];
+
+// Total tells across all pairs
+const TOTAL_TELLS = TASKS.reduce((s, t) => s + t.tells.length, 0);
+
+// ── State ──────────────────────────────────────────────────────────────────────
+let r2Base = '';
+let pairIdx = 0;
+let tellIdx = 0;
+let pendingX = null;
+let pendingY = null;
+// results[pairIdx][tellIdx] = { x, y, radius } or null (skipped)
+const results = TASKS.map(t => t.tells.map(() => null));
+let tellsDone = 0;
+
+// ── Setup ──────────────────────────────────────────────────────────────────────
+function startPicker() {
+  const v = document.getElementById('r2url').value.trim().replace(/\/$/, '');
+  if (!v.startsWith('http')) { alert('Please enter a valid R2 public URL.'); return; }
+  r2Base = v;
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('picker').style.display = 'block';
+  loadCurrent();
+}
+
+// ── Image loading ──────────────────────────────────────────────────────────────
+function loadCurrent() {
+  const task = TASKS[pairIdx];
+  const tell = task.tells[tellIdx];
+  const totalTellsSoFar = TASKS.slice(0, pairIdx).reduce((s, t) => s + t.tells.length, 0) + tellIdx;
+  const pct = Math.round((tellsDone / TOTAL_TELLS) * 100);
+
+  document.getElementById('hdr-pair').textContent = task.pair.toUpperCase();
+  document.getElementById('hdr-tell').textContent = tell.label;
+  document.getElementById('hdr-counter').textContent = `${tellsDone + 1} / ${TOTAL_TELLS} tells`;
+  document.getElementById('progress').style.width = pct + '%';
+
+  document.getElementById('ctrl-num').textContent  = `Tell ${tellIdx + 1} of ${task.tells.length}`;
+  document.getElementById('ctrl-name').textContent = tell.label;
+  document.getElementById('ctrl-desc').textContent = tell.description;
+
+  // Render placed-list for this pair
+  const list = document.getElementById('placed-list');
+  list.innerHTML = task.tells.map((t, i) => {
+    const r = results[pairIdx][i];
+    const cls = r ? 'done' : (i === tellIdx ? 'active' : '');
+    return `<div class="placed-item ${cls}"><div class="placed-dot">${i + 1}</div>${t.label}</div>`;
+  }).join('');
+
+  // Load image
+  pendingX = null;
+  pendingY = null;
+  const img = document.getElementById('ai-img');
+  img.src = `${r2Base}/${task.pair}/ai.webp`;
+
+  renderCircles();
+  updateConfirmBtn();
+  document.getElementById('img-hint').textContent = 'Click the image to place the circle';
+}
+
+// ── Image click ────────────────────────────────────────────────────────────────
+document.getElementById('img-container').addEventListener('click', function(e) {
+  const rect = this.getBoundingClientRect();
+  const img  = document.getElementById('ai-img');
+  pendingX = (e.clientX - rect.left) / img.offsetWidth;
+  pendingY = (e.clientY - rect.top)  / img.offsetHeight;
+  renderCircles();
+  updateConfirmBtn();
+  document.getElementById('img-hint').textContent = 'Adjust radius if needed, then click "Place & Continue"';
+});
+
+// ── Mouse move preview ────────────────────────────────────────────────────────
+document.getElementById('img-container').addEventListener('mousemove', function(e) {
+  if (pendingX !== null) return; // already placed, don't show preview
+  const rect = this.getBoundingClientRect();
+  const img  = document.getElementById('ai-img');
+  const mx = (e.clientX - rect.left) / img.offsetWidth;
+  const my = (e.clientY - rect.top)  / img.offsetHeight;
+  renderCircles(mx, my);
+});
+document.getElementById('img-container').addEventListener('mouseleave', function() {
+  if (pendingX !== null) return;
+  renderCircles();
+});
+
+function onRadiusChange() {
+  document.getElementById('radius-val').textContent = document.getElementById('radius-slider').value + '%';
+  renderCircles();
+}
+
+// ── Render circles ─────────────────────────────────────────────────────────────
+function renderCircles(hoverX, hoverY) {
+  const container = document.getElementById('img-container');
+  const img       = document.getElementById('ai-img');
+  // Remove old circles
+  container.querySelectorAll('.circle').forEach(c => c.remove());
+
+  const W = img.offsetWidth;
+  const H = img.offsetHeight;
+  const r = parseFloat(document.getElementById('radius-slider').value) / 100;
+
+  // Draw already-placed circles for this pair
+  TASKS[pairIdx].tells.forEach((t, i) => {
+    if (i === tellIdx) return; // current tell handled separately
+    const res = results[pairIdx][i];
+    if (!res) return;
+    addCircle(container, res.x * W, res.y * H, res.radius * W, i + 1, 'placed');
+  });
+
+  // Draw pending (active) circle
+  if (pendingX !== null) {
+    addCircle(container, pendingX * W, pendingY * H, r * W, tellIdx + 1, 'active');
+  } else if (hoverX !== undefined) {
+    addCircle(container, hoverX * W, hoverY * H, r * W, tellIdx + 1, 'previewing');
+  }
+}
+
+function addCircle(container, cx, cy, r, num, cls) {
+  const div = document.createElement('div');
+  div.className = `circle ${cls}`;
+  div.textContent = num;
+  div.style.left   = cx + 'px';
+  div.style.top    = cy + 'px';
+  div.style.width  = (r * 2) + 'px';
+  div.style.height = (r * 2) + 'px';
+  container.appendChild(div);
+}
+
+// ── Confirm / Skip ─────────────────────────────────────────────────────────────
+function updateConfirmBtn() {
+  document.getElementById('confirm-btn').disabled = pendingX === null;
+}
+
+function confirmTell() {
+  if (pendingX === null) return;
+  const r = parseFloat(document.getElementById('radius-slider').value) / 100;
+  results[pairIdx][tellIdx] = {
+    x: parseFloat(pendingX.toFixed(4)),
+    y: parseFloat(pendingY.toFixed(4)),
+    radius: parseFloat(r.toFixed(4)),
+  };
+  advance();
+}
+
+function skipTell() {
+  results[pairIdx][tellIdx] = null; // will keep x:null,y:null,radius:null
+  advance();
+}
+
+function advance() {
+  tellsDone++;
+  tellIdx++;
+  if (tellIdx >= TASKS[pairIdx].tells.length) {
+    pairIdx++;
+    tellIdx = 0;
+  }
+  if (pairIdx >= TASKS.length) {
+    showExport();
+    return;
+  }
+  loadCurrent();
+}
+
+// ── Export ─────────────────────────────────────────────────────────────────────
+function showExport() {
+  document.getElementById('picker').style.display = 'none';
+  document.getElementById('export-screen').style.display = 'block';
+
+  const sqlLines = TASKS.map(task => {
+    const annotations = task.tells.map((tell, i) => {
+      const res = results[task === TASKS[TASKS.indexOf(task)] ? TASKS.indexOf(task) : 0][i];
+      // find pair index
+      const pi = TASKS.indexOf(task);
+      const r = results[pi][i];
+      return {
+        label: tell.label,
+        description: tell.description,
+        x: r ? r.x : null,
+        y: r ? r.y : null,
+        radius: r ? r.radius : null,
+      };
+    });
+    const jsonStr = JSON.stringify(annotations).replace(/'/g, "''");
+    return `UPDATE tasks SET tell_annotations = '${jsonStr}'::jsonb\n  WHERE source_attribution = '${task.attribution}';`;
+  }).join('\n\n');
+
+  document.getElementById('sql-output').textContent = sqlLines;
+
+  // Build seed.js snippet
+  const seedLines = TASKS.map(task => {
+    const pi = TASKS.indexOf(task);
+    const tellsJs = task.tells.map((tell, i) => {
+      const res = results[pi][i];
+      const xStr = res ? res.x : 'null';
+      const yStr = res ? res.y : 'null';
+      const rStr = res ? res.radius : 'null';
+      return `      { label: ${JSON.stringify(tell.label)}, description: ${JSON.stringify(tell.description)}, x: ${xStr}, y: ${yStr}, radius: ${rStr} }`;
+    }).join(',\n');
+    return `  // ${task.pair}\n  tell_annotations: [\n${tellsJs},\n  ],`;
+  }).join('\n\n');
+  document.getElementById('seedjs-output').textContent = seedLines;
+}
+
+function copySql() {
+  navigator.clipboard.writeText(document.getElementById('sql-output').textContent);
+  const btn = document.getElementById('copy-sql-btn');
+  btn.textContent = 'Copied!'; btn.classList.add('copied');
+  setTimeout(() => { btn.textContent = 'Copy SQL'; btn.classList.remove('copied'); }, 2000);
+}
+function copySeed() {
+  navigator.clipboard.writeText(document.getElementById('seedjs-output').textContent);
+  const btn = document.getElementById('copy-seed-btn');
+  btn.textContent = 'Copied!'; btn.classList.add('copied');
+  setTimeout(() => { btn.textContent = 'Copy JS'; btn.classList.remove('copied'); }, 2000);
+}
+</script>
+</body>
+</html>
