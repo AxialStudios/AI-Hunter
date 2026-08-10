@@ -53,6 +53,8 @@ export default function GameplayScreen() {
 
   // null = loading from storage; 0 = complete; string = active step
   const [tutorialStep, setTutorialStep] = useState(null);
+  const [votesBoxTapped, setVotesBoxTapped] = useState(false);
+  const [showNextPairPulse, setShowNextPairPulse] = useState(false);
 
   const [showTells, setShowTells] = useState(false);
   const [zoomTell,    setZoomTell]    = useState(null);
@@ -370,8 +372,14 @@ export default function GameplayScreen() {
   const labelsOpacity  = useRef(new Animated.Value(0)).current;
   const bottomOpacity  = useRef(new Animated.Value(0)).current;
   const shimmerAnims        = useRef(Array.from({ length: 5 }, () => new Animated.Value(0))).current;
-  const tellsPulse          = useRef(new Animated.Value(0)).current;
-  const tutorialPromptAnim  = useRef(new Animated.Value(0)).current;
+  const tellsPulse           = useRef(new Animated.Value(0)).current;
+  const circleEntryScale    = useRef(new Animated.Value(0)).current;
+  const circleRippleScale   = useRef(new Animated.Value(1)).current;
+  const circleRippleOpacity  = useRef(new Animated.Value(0)).current;
+  const votesHintOpacity    = useRef(new Animated.Value(0)).current;
+  const rippleLoopRef        = useRef(null);
+  const nextPairPulse        = useRef(new Animated.Value(0)).current;
+  const tutorialPromptAnim   = useRef(new Animated.Value(0)).current;
 
   useFocusEffect(useCallback(() => { fetchTask(); }, []));
 
@@ -381,48 +389,124 @@ export default function GameplayScreen() {
     });
   }, []);
 
-  // Hide tab bar when tutorial starts; reveal is deferred to handleNextCard
+  // Hide tab bar when tutorial starts; reveal is deferred to handleNextCard.
+  // Also hide the playing layer during the cinematic so loaded images don't
+  // bleed through as the cinematic overlay fades out on exit.
   useEffect(() => {
-    if (tutorialStep === 'cinematic') startTutorial();
+    if (tutorialStep === 'cinematic') {
+      startTutorial();
+      playingOpacity.setValue(0);
+    }
   }, [tutorialStep]);
 
-  // 'pick' → 'zoom': user selected an image
+  // 'pick' → 'zoom': fade out the pick prompt first, then change step so the
+  // zoom text never flash-renders at full opacity before being reset to 0.
   useEffect(() => {
-    if (tutorialStep === 'pick' && selectedSide) setTutorialStep('zoom');
+    if (tutorialStep === 'pick' && selectedSide) {
+      Animated.timing(tutorialPromptAnim, { toValue: 0, duration: 150, useNativeDriver: true })
+        .start(() => setTutorialStep('zoom'));
+    }
   }, [selectedSide]);
 
-  // 'confirm' → 'tells': result arrived
+  // 'confirm' → 'tells_votes': result arrived
   useEffect(() => {
-    if (tutorialStep === 'confirm' && result) setTutorialStep('tells');
+    if (tutorialStep === 'confirm' && result) setTutorialStep('tells_votes');
   }, [result]);
 
   // Fade in tutorial prompt text when step becomes 'pick' or 'zoom' (avoids flash)
   useEffect(() => {
     if (tutorialStep === 'pick' || tutorialStep === 'zoom') {
       tutorialPromptAnim.setValue(0);
-      Animated.timing(tutorialPromptAnim, { toValue: 1, duration: 220, delay: 60, useNativeDriver: true }).start();
+      Animated.timing(tutorialPromptAnim, { toValue: 1, duration: 420, delay: 80, useNativeDriver: true }).start();
     }
   }, [tutorialStep]);
 
-  // 'tells': auto-expand the tells section + pulse ring
+  // tells sub-steps: pulse ring throughout all three phases
   useEffect(() => {
-    if (tutorialStep !== 'tells') return;
-    setShowTells(true);
+    if (tutorialStep !== 'tells_votes' && tutorialStep !== 'tells_open' && tutorialStep !== 'tells_tap') {
+      circleEntryScale.setValue(0);
+      circleRippleOpacity.setValue(0);
+      votesHintOpacity.setValue(0);
+      return;
+    }
     const loop = Animated.loop(Animated.sequence([
-      Animated.timing(tellsPulse, { toValue: 1,   duration: 900, useNativeDriver: true }),
+      Animated.timing(tellsPulse, { toValue: 1,    duration: 900, useNativeDriver: true }),
       Animated.timing(tellsPulse, { toValue: 0.15, duration: 900, useNativeDriver: true }),
     ]));
     loop.start();
-    return () => { loop.stop(); tellsPulse.setValue(0); };
+
+    return () => {
+      loop.stop();
+      tellsPulse.setValue(0);
+      if (rippleLoopRef.current) { rippleLoopRef.current.stop(); rippleLoopRef.current = null; }
+      circleEntryScale.setValue(0);
+      circleRippleScale.setValue(1);
+      circleRippleOpacity.setValue(0);
+      votesHintOpacity.setValue(0);
+      setVotesBoxTapped(false);
+    };
   }, [tutorialStep]);
+
+  // Circle bounce-in fires when user taps the votes box
+  useEffect(() => {
+    if (!votesBoxTapped) return;
+    // Hint text fades in immediately
+    Animated.timing(votesHintOpacity, { toValue: 1, duration: 280, useNativeDriver: true }).start();
+    // Circle springs in after 500ms delay, then sonar-ping ripple
+    const timeout = setTimeout(() => {
+      Animated.spring(circleEntryScale, {
+        toValue: 1,
+        tension: 120,
+        friction: 6,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (!finished) return;
+        circleRippleScale.setValue(1);
+        circleRippleOpacity.setValue(0.8);
+        rippleLoopRef.current = Animated.loop(
+          Animated.parallel([
+            Animated.sequence([
+              Animated.timing(circleRippleScale,   { toValue: 1.65, duration: 750, useNativeDriver: true }),
+              Animated.timing(circleRippleScale,   { toValue: 1.0,  duration: 750, useNativeDriver: true }),
+            ]),
+            Animated.sequence([
+              Animated.timing(circleRippleOpacity, { toValue: 0,    duration: 750, useNativeDriver: true }),
+              Animated.timing(circleRippleOpacity, { toValue: 0.8,  duration: 750, useNativeDriver: true }),
+            ]),
+          ])
+        );
+        rippleLoopRef.current.start();
+      });
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [votesBoxTapped]);
+
+  useEffect(() => {
+    if (!showNextPairPulse) { nextPairPulse.setValue(0); return; }
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(nextPairPulse, { toValue: 1,    duration: 900, useNativeDriver: true }),
+      Animated.timing(nextPairPulse, { toValue: 0.15, duration: 900, useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => { loop.stop(); nextPairPulse.setValue(0); };
+  }, [showNextPairPulse]);
 
   async function advanceTutorial() {
     if (tutorialStep === 'cinematic') {
+      // playingOpacity was 0 during the cinematic — fade the playing layer back in
+      // so images dissolve up from dark rather than snapping through a fading overlay.
+      Animated.timing(playingOpacity, { toValue: 1, duration: 440, useNativeDriver: true }).start();
       setTutorialStep('pick');
-    } else if (tutorialStep === 'tells') {
+    } else if (tutorialStep === 'tells_votes') {
+      setTutorialStep('tells_open');
+    } else if (tutorialStep === 'tells_open') {
+      setShowTells(true);
+      setTutorialStep('tells_tap');
+    } else if (tutorialStep === 'tells_tap') {
       await AsyncStorage.setItem('ai_hunter_tutorial_done', '1');
       setTutorialStep(0);
-      wasTutorial.current = true; // tab bar reveal deferred to Next Pair
+      wasTutorial.current = true;
+      setShowNextPairPulse(true);
     }
   }
 
@@ -498,9 +582,9 @@ export default function GameplayScreen() {
 
       if (fastTransition.current) {
         fastTransition.current = false;
-        Animated.timing(fadeAnim, { toValue: 1, duration: 130, useNativeDriver: true }).start();
+        Animated.timing(fadeAnim, { toValue: 1, duration: 260, useNativeDriver: true }).start();
       } else {
-        Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+        Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
       }
     } else if (loadCount.current > 2) {
       // Extra onLoadEnd fires (e.g. source prop update) — just ensure image is visible.
@@ -615,7 +699,6 @@ export default function GameplayScreen() {
 
   function handleNextCard() {
     light();
-    setColorRevealed(false);
     const afterTutorial = wasTutorial.current;
     wasTutorial.current = false;
     setShowTells(false);
@@ -623,14 +706,26 @@ export default function GameplayScreen() {
     setSelectedSide(null);
     setInspectSide(null);
     setAiNaturalSize({ width: 0, height: 0 });
+    setShowNextPairPulse(false);
 
     Animated.timing(resultsOpacity, { toValue: 0, duration: 150, useNativeDriver: true })
       .start(() => {
         if (afterTutorial) revealTabBar();
         if (nextTask) {
-          // Images hidden while source props update in-place (no cardKey change).
-          // The pre-render above keeps decoded textures in GPU memory, so
-          // onLoadEnd fires in <1 frame and fastTransition snaps fadeAnim to 1.
+          // Reset all state that affects the playing layer BEFORE it becomes visible.
+          // setColorRevealed and setTappedSide are moved here (not before the fade)
+          // so the results layer fades out with its colored content intact, not flashing white.
+          setColorRevealed(false);
+          setTappedSide(null);
+          setVoting(false);
+          setResult(null);
+          setLoadError(null);
+          setTask(nextTask);
+          setLeftIsReal(nextLeftIsReal.current);
+          setNextTask(null);
+          setLeftPctDisplay(0);
+          setRightPctDisplay(0);
+
           fadeAnim.setValue(0);
           leftFillAnim.setValue(0);
           rightFillAnim.setValue(0);
@@ -638,23 +733,20 @@ export default function GameplayScreen() {
           verdictOpacity.setValue(0);
           labelsOpacity.setValue(0);
           bottomOpacity.setValue(0);
-          setLeftPctDisplay(0);
-          setRightPctDisplay(0);
           shimmerAnims.forEach(v => v.setValue(0));
 
-          consumeCachedTask(); // clear module-level cache
+          consumeCachedTask();
           loadCount.current = 0;
           fastTransition.current = true;
-          setTask(nextTask);
-          setLeftIsReal(nextLeftIsReal.current);
-          setNextTask(null);
-          setResult(null);
-          setVoting(false);
-          setTappedSide(null);
-          setLoadError(null);
           startTime.current = Date.now();
-          playingOpacity.setValue(1);
-          setPhase('playing');
+
+          // Defer showing the playing layer by one rAF so React has flushed
+          // all state updates above — prevents stale tappedSide/colorRevealed
+          // bleeding through on the native side for one frame.
+          requestAnimationFrame(() => {
+            playingOpacity.setValue(1);
+            setPhase('playing');
+          });
 
           // Kick off prefetch for the card after next
           prefetchNextTask(supabase).then(t => {
@@ -703,14 +795,16 @@ export default function GameplayScreen() {
             {/* Top section: fixed height matching results verdict block + gap
                 so the imageRow sits at the same Y in both playing and results */}
             <View style={styles.playingTop}>
-              {tutorialStep === 'pick' ? (
+              {tutorialStep === 'cinematic' ? (
+                null
+              ) : tutorialStep === 'pick' ? (
                 <Animated.Text style={[styles.tutorialPrompt, { opacity: tutorialPromptAnim }]}>
                   Tap the image you think is real
                 </Animated.Text>
               ) : tutorialStep === 'zoom' ? (
                 <Animated.View style={[{ alignItems: 'center', gap: 6 }, { opacity: tutorialPromptAnim }]}>
                   <Text style={styles.tutorialPrompt}>Zoom in to inspect it</Text>
-                  <Text style={styles.tutorialHint}>Tap the icon — or pinch to zoom</Text>
+                  <Text style={styles.tutorialHint}>Tap the icon and pinch to zoom</Text>
                 </Animated.View>
               ) : phase === 'loading' && !task ? (
                 <ActivityIndicator color={colors.textPrimary} />
@@ -791,6 +885,7 @@ export default function GameplayScreen() {
                   style={[
                     styles.confirmBtn,
                     (!selectedSide || phase !== 'playing') && { opacity: 0 },
+                    tutorialStep === 'pick' && { opacity: 0 },
                     tutorialStep === 'zoom' && { opacity: 0.28 },
                   ]}
                   onPress={handleConfirm}
@@ -870,11 +965,27 @@ export default function GameplayScreen() {
             </View>
 
             {result && (
-              tutorialStep === 'tells' ? (
-                <Animated.View style={[styles.tutorialVotesBox, { marginTop: 14, opacity: bottomOpacity }]}>
-                  <Animated.View style={[StyleSheet.absoluteFillObject, styles.tutorialVotesBorder, { opacity: tellsPulse }]} pointerEvents="none" />
-                  <Text style={styles.totalVotes}>{result.total_votes.toLocaleString()} total votes</Text>
-                  <Text style={styles.tutorialVotesHint}>This shows how all players voted</Text>
+              tutorialStep === 'tells_votes' ? (
+                <Animated.View style={{ marginTop: 14, opacity: bottomOpacity, alignItems: 'center' }}>
+                  {votesBoxTapped ? (
+                    /* After tap: static box + hint fades in */
+                    <View style={styles.tutorialVotesBox}>
+                      <Text style={[styles.totalVotes, { fontSize: 17 }]}>{result.total_votes.toLocaleString()} total votes</Text>
+                      <Animated.Text style={[styles.tutorialVotesHint, { opacity: votesHintOpacity, fontSize: 14 }]}>
+                        The percentages and vote count show how all players voted.
+                      </Animated.Text>
+                    </View>
+                  ) : (
+                    /* Before tap: tappable box with pulsing ring, no hint text */
+                    <TouchableOpacity
+                      style={styles.tutorialVotesBox}
+                      onPress={() => { light(); setVotesBoxTapped(true); }}
+                      activeOpacity={0.8}
+                    >
+                      <Animated.View style={[StyleSheet.absoluteFillObject, styles.tutorialVotesBorder, { opacity: tellsPulse }]} pointerEvents="none" />
+                      <Text style={[styles.totalVotes, { fontSize: 17 }]}>{result.total_votes.toLocaleString()} total votes</Text>
+                    </TouchableOpacity>
+                  )}
                 </Animated.View>
               ) : (
                 <Animated.Text style={[styles.totalVotes, { marginTop: 14, opacity: bottomOpacity }]}>
@@ -886,23 +997,85 @@ export default function GameplayScreen() {
             {/* Tells + next pair */}
             {result && (
               <Animated.View style={[styles.bottomContent, { marginTop: 14, opacity: bottomOpacity }]}>
-                {tutorialStep === 'tells' && (
-                  <Text style={styles.tutorialTellsPrompt}>Tap any tell below to explore it</Text>
+                {tutorialStep === 'tells_votes' ? (
+                  /* Votes step: circle only appears after tapping the votes box */
+                  votesBoxTapped ? (
+                    <View style={{ alignItems: 'center', paddingVertical: 10 }}>
+                      <TouchableOpacity
+                        onPress={() => { light(); advanceTutorial(); }}
+                        hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+                        activeOpacity={0.7}
+                      >
+                        {/* Sonar-ping ripple ring */}
+                        <Animated.View
+                          pointerEvents="none"
+                          style={[
+                            styles.tutorialContinueCircle,
+                            StyleSheet.absoluteFillObject,
+                            {
+                              backgroundColor: 'transparent',
+                              transform: [{ scale: circleRippleScale }],
+                              opacity: circleRippleOpacity,
+                            },
+                          ]}
+                        />
+                        {/* Main circle — springs in after 500ms delay */}
+                        <Animated.View style={[
+                          styles.tutorialContinueCircle,
+                          {
+                            transform: [{ scale: circleEntryScale }],
+                            opacity: circleEntryScale,
+                          },
+                        ]} />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    /* Space holder so layout doesn't jump when circle appears */
+                    <View style={{ height: 64 }} />
+                  )
+                ) : (
+                  /* tells_open, tells_tap, or normal play */
+                  <View style={styles.actionRow}>
+                    <TouchableOpacity
+                      style={styles.tellsBtn}
+                      onPress={() => {
+                        light();
+                        if (tutorialStep === 'tells_open') advanceTutorial();
+                        else setShowTells(v => !v);
+                      }}
+                    >
+                      {tutorialStep === 'tells_open' && (
+                        <Animated.View
+                          pointerEvents="none"
+                          style={[StyleSheet.absoluteFillObject, {
+                            borderRadius: radius.pill,
+                            borderWidth: 2,
+                            borderColor: '#fff',
+                            opacity: tellsPulse,
+                          }]}
+                        />
+                      )}
+                      <Text style={styles.tellsBtnText}>{showTells ? '▲  Hide tells' : '▼  See the tells'}</Text>
+                    </TouchableOpacity>
+                    {/* Next Pair: hidden during tells_open and tells_tap; unlocks after first tell tap */}
+                    {tutorialStep !== 'tells_open' && tutorialStep !== 'tells_tap' && (
+                      <TouchableOpacity style={styles.nextBtn} onPress={handleNextCard}>
+                        {showNextPairPulse && (
+                          <Animated.View
+                            pointerEvents="none"
+                            style={[StyleSheet.absoluteFillObject, {
+                              borderRadius: radius.pill,
+                              borderWidth: 2,
+                              borderColor: '#fff',
+                              opacity: nextPairPulse,
+                            }]}
+                          />
+                        )}
+                        <Text style={styles.nextBtnText}>Next Pair  →</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 )}
-
-                {/* Side-by-side action row */}
-                <View style={styles.actionRow}>
-                  <TouchableOpacity style={styles.tellsBtn} onPress={() => { light(); setShowTells(v => !v); }}>
-                    <Text style={styles.tellsBtnText}>{showTells ? '▲  Hide tells' : '▼  See the tells'}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.nextBtn, tutorialStep === 'tells' && { opacity: 0.3 }]}
-                    onPress={handleNextCard}
-                    disabled={tutorialStep === 'tells'}
-                  >
-                    <Text style={styles.nextBtnText}>Next Pair  →</Text>
-                  </TouchableOpacity>
-                </View>
 
                 {/* Tells section: outer collapses to height 0 (not unmounted) so the
                     Image stays mounted and fully decoded — no flash when opening. */}
@@ -955,12 +1128,12 @@ export default function GameplayScreen() {
                         key={i}
                         style={styles.tellItem}
                         onPress={() => {
-                          if (tutorialStep === 'tells') advanceTutorial();
+                          if (tutorialStep === 'tells_tap') advanceTutorial();
                           if (tell.x != null) openTell(tell);
                         }}
                         activeOpacity={0.72}
                       >
-                        {tutorialStep === 'tells' && (
+                        {tutorialStep === 'tells_tap' && (
                           <Animated.View
                             pointerEvents="none"
                             style={{
@@ -1123,7 +1296,7 @@ const styles = StyleSheet.create({
   playingBottom: { flex: 1, justifyContent: 'flex-end' },
   prompt:        { fontSize: 23, fontFamily: fonts.semiBold, color: colors.textPrimary, textAlign: 'center', paddingHorizontal: 16 },
   tutorialPrompt: { fontSize: 27, fontFamily: fonts.bold, color: colors.textPrimary, textAlign: 'center', paddingHorizontal: 16 },
-  tutorialHint:   { fontSize: 14, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.55)', textAlign: 'center' },
+  tutorialHint:   { fontSize: 14, fontFamily: fonts.regular, color: colors.textPrimary, textAlign: 'center' },
   errorText:     { color: colors.incorrect, fontSize: 16, fontFamily: fonts.medium, textAlign: 'center', paddingHorizontal: 16 },
 
   // ── Results layer ─────────────────────────────────────────────
@@ -1189,6 +1362,7 @@ const styles = StyleSheet.create({
   tutorialVotesBox:    { alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 22, borderRadius: 20, alignItems: 'center', gap: 2 },
   tutorialVotesBorder: { borderRadius: 20, borderWidth: 1.5, borderColor: '#fff' },
   tutorialVotesHint:   { fontSize: 11, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.45)', textAlign: 'center', marginTop: 2 },
+  tutorialContinueCircle: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: '#fff', backgroundColor: 'rgba(255,255,255,0.08)' },
 
   // ── Zoom modal ────────────────────────────────────────────────
   modalContainer:   { flex: 1, backgroundColor: '#000' },
@@ -1197,7 +1371,7 @@ const styles = StyleSheet.create({
   modalTitle:       { flex: 1, fontSize: 17, fontFamily: fonts.bold, color: colors.textPrimary, textAlign: 'center' },
   modalImageArea:   { width: SW, height: MODAL_IMG_H, overflow: 'hidden', alignSelf: 'center' },
   modalImage:       { width: SW, height: MODAL_IMG_H },
-  modalFooter:      { flex: 1, justifyContent: 'flex-end', alignItems: 'center', paddingHorizontal: 32, gap: 20 },
+  modalFooter:      { flex: 1, justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 32, paddingTop: 24 },
   modalDescription: { fontSize: 18, fontFamily: fonts.regular, color: colors.textPrimary, lineHeight: 27, textAlign: 'center' },
   modalDoneBtn:     { backgroundColor: colors.surface, paddingVertical: 14, paddingHorizontal: 40, borderRadius: radius.pill },
   modalDoneText:    { fontSize: 15, fontFamily: fonts.semiBold, color: colors.textPrimary },

@@ -25,14 +25,10 @@ export default function TutorialOverlay({ step, onAdvance, selectedSide }) {
 
 function CinematicScreen({ onAdvance, insets }) {
   const opacity   = useRef(new Animated.Value(0)).current;
-  const textTY    = useRef(new Animated.Value(24)).current;
   const leaveAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    Animated.sequence([
-      Animated.timing(opacity, { toValue: 1, duration: 240, useNativeDriver: true }),
-      Animated.spring(textTY, { toValue: 0, tension: 65, friction: 13, useNativeDriver: true }),
-    ]).start();
+    Animated.timing(opacity, { toValue: 1, duration: 320, useNativeDriver: true }).start();
   }, []);
 
   function handleReady() {
@@ -45,12 +41,12 @@ function CinematicScreen({ onAdvance, insets }) {
         style={[styles.cinematicInner, { opacity, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 44 }]}
       >
         <View style={styles.cinCopyArea}>
-          <Animated.View style={[styles.copyBlock, { transform: [{ translateY: textTY }] }]}>
-            <Text style={styles.cinHeading}>One is real.{'\n'}One is AI.</Text>
+          <View style={styles.copyBlock}>
+            <Text style={styles.cinHeading}>One is Real.{'\n'}One is AI.</Text>
             <Text style={styles.cinSub}>
               Each round you'll see a pair of images.{'\n'}Tap the one you think is real.
             </Text>
-          </Animated.View>
+          </View>
         </View>
 
         <TouchableOpacity style={styles.cinBtn} onPress={handleReady} activeOpacity={0.85}>
@@ -105,11 +101,13 @@ function ZoomOverlay({ insets, selectedSide }) {
 
   const imageTop = insets.top + IMAGE_TOP_BASE;
 
-  // Zoom button: `position:'absolute', top:8, right:8` inside imageWrapper.
+  // Zoom button: `position:'absolute', top:8, right:8` inside imageWrapper (borderWidth:3).
+  // Coordinates are relative to content area (inside the 3px border), so add border to both axes.
   // Button size: icon(13) + padding(6×2) = 25pt. Half = 12.5pt (using 13 to round up).
+  const BORDER_W = 3;
   const cardLeft = selectedSide === 'left' ? 16 : 16 + CARD_W + 10;
-  const btnCX    = cardLeft + CARD_W - 8 - 13;  // centre x of button
-  const btnCY    = imageTop + 8 + 13;            // centre y of button
+  const btnCX    = cardLeft + CARD_W - BORDER_W - 8 - 13;  // centre x of button
+  const btnCY    = imageTop + BORDER_W + 8 + 13;            // centre y of button
   const RING_R   = 17;                           // snug around 25pt button; stays inside card top
 
   return (
@@ -163,7 +161,6 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     textAlign: 'center',
     lineHeight: 30,
-    opacity: 0.75,
   },
 
   cinBtn: {

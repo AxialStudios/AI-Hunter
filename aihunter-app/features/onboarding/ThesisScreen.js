@@ -452,14 +452,14 @@ function Beat2({ onNext }) {
       if (display !== lastDisplayed) {
         lastDisplayed = display;
         setImpactVal(display);
-        if (progress < 1) light();
+        if (display === cfg.target) heavy();   // land exactly when the number visually hits target
+        else if (progress < 1) light();
       }
 
       if (progress < 1) {
         requestAnimationFrame(tick);
       } else {
         setImpactVal(cfg.target);
-        heavy();
         setTimeout(() => {
           Animated.timing(circleAlpha, {
             toValue: 1, duration: 360, easing: Easing.out(Easing.ease), useNativeDriver: true,
