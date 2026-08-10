@@ -30,6 +30,7 @@ const INSPECT_DOUBLE_TAP_ZOOM = 2.5;
 
 const CORRECT_FILL   = 'rgba(34,197,94,0.72)';
 const INCORRECT_FILL = 'rgba(239,68,68,0.72)';
+const WHITE_FILL     = 'rgba(255,255,255,0.55)';
 
 export default function GameplayScreen() {
   const { user }                                        = useAuth();
@@ -47,6 +48,7 @@ export default function GameplayScreen() {
   const [loadError, setLoadError]   = useState(null);
   const [leftPctDisplay,  setLeftPctDisplay]  = useState(0);
   const [rightPctDisplay, setRightPctDisplay] = useState(0);
+  const [colorRevealed,   setColorRevealed]   = useState(false);
   const startTime                   = useRef(Date.now());
 
   // null = loading from storage; 0 = complete; string = active step
@@ -530,7 +532,6 @@ export default function GameplayScreen() {
 
     if (voteErr) { console.error('Vote error:', voteErr.message); setVoting(false); setTappedSide(null); setSelectedSide(null); return; }
 
-    data.was_correct ? success() : hapticError();
     setResult(data);
     revealResults(data);
   }
@@ -550,6 +551,7 @@ export default function GameplayScreen() {
     const leftPct  = leftIsReal ? data.real_pct : data.ai_pct;
     const rightPct = leftIsReal ? data.ai_pct   : data.real_pct;
 
+    setColorRevealed(false);
     setPhase('results');
     prefetchNextTask(supabase).then(t => {
       if (t && !nextTask) { nextLeftIsReal.current = Math.random() > 0.5; setNextTask(t); }
@@ -565,25 +567,34 @@ export default function GameplayScreen() {
       setLeftPctDisplay(0);
       setRightPctDisplay(0);
 
-      // Beat 1: bars fill immediately — bars are the drama
+      // Beat 1: bars fill — white, suspense, two light ticks at 1/3 and 2/3
       leftFillAnim.setValue(0);
       rightFillAnim.setValue(0);
       Animated.parallel([
-        Animated.timing(leftFillAnim,  { toValue: leftPct  / 100, duration: 900, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-        Animated.timing(rightFillAnim, { toValue: rightPct / 100, duration: 900, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(leftFillAnim,  { toValue: leftPct  / 100, duration: 1100, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(rightFillAnim, { toValue: rightPct / 100, duration: 1100, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       ]).start();
-      countUp(setLeftPctDisplay,  leftPct,  900);
-      countUp(setRightPctDisplay, rightPct, 900);
+      countUp(setLeftPctDisplay,  leftPct,  1100);
+      countUp(setRightPctDisplay, rightPct, 1100);
 
-      // Beat 2: verdict + labels + bottom all land together as bars finish
+      // Haptic ticks: start immediately at 80ms, spread evenly to 900ms.
+      // Count scales with dominant bar — 90% gets 6 ticks, 50% gets 4, 30% gets 3.
+      const numTicks = Math.min(6, Math.max(3, Math.round((Math.max(leftPct, rightPct) / 100) * 7)));
+      for (let i = 0; i < numTicks; i++) {
+        const delay = Math.round(80 + (i / (numTicks - 1)) * 820);
+        setTimeout(() => light(), delay);
+      }
+
+      // Beat 2: bars snap to color, verdict + labels + bottom all land together
       setTimeout(() => {
+        setColorRevealed(true);
         Animated.parallel([
           Animated.timing(verdictOpacity, { toValue: 1, duration: 90, easing: Easing.out(Easing.ease), useNativeDriver: true }),
           Animated.timing(labelsOpacity,  { toValue: 1, duration: 90, easing: Easing.out(Easing.ease), useNativeDriver: true }),
           Animated.timing(bottomOpacity,  { toValue: 1, duration: 90, easing: Easing.out(Easing.ease), useNativeDriver: true }),
         ]).start();
-        setTimeout(() => medium(), 86);
-      }, 875);
+        setTimeout(() => data.was_correct ? success() : hapticError(), 86);
+      }, 1075);
     }, 50);
   }
 
@@ -604,6 +615,7 @@ export default function GameplayScreen() {
 
   function handleNextCard() {
     light();
+    setColorRevealed(false);
     const afterTutorial = wasTutorial.current;
     wasTutorial.current = false;
     setShowTells(false);
@@ -670,8 +682,8 @@ export default function GameplayScreen() {
   const leftUrl  = task ? (leftIsReal ? task.real_image_url : task.ai_image_url) : '';
   const rightUrl = task ? (leftIsReal ? task.ai_image_url   : task.real_image_url) : '';
 
-  const leftFillColor  = leftIsReal  ? CORRECT_FILL : INCORRECT_FILL;
-  const rightFillColor = !leftIsReal ? CORRECT_FILL : INCORRECT_FILL;
+  const leftFillColor  = colorRevealed ? (leftIsReal  ? CORRECT_FILL : INCORRECT_FILL) : WHITE_FILL;
+  const rightFillColor = colorRevealed ? (!leftIsReal ? CORRECT_FILL : INCORRECT_FILL) : WHITE_FILL;
   const leftColor      = leftIsReal  ? colors.correct : colors.incorrect;
   const rightColor     = !leftIsReal ? colors.correct : colors.incorrect;
   const tells          = task ? (task.tell_annotations || []) : [];
@@ -825,7 +837,7 @@ export default function GameplayScreen() {
             {/* Images + fill bars + per-card labels */}
             <View style={styles.imageRow}>
               <View style={styles.imageCardCol}>
-                <View style={[styles.imageWrapper, tappedSide === 'left' && { borderColor: result?.was_correct ? colors.correct : colors.incorrect }]}>
+                <View style={[styles.imageWrapper, tappedSide === 'left' && { borderColor: colorRevealed ? (result?.was_correct ? colors.correct : colors.incorrect) : '#ffffff' }]}>
                   {task && <Image source={{ uri: leftUrl }} style={styles.image} resizeMode="cover" />}
                   <Animated.View style={[StyleSheet.absoluteFillObject, { backgroundColor: leftFillColor, transform: [{ translateY: leftFillTranslateY }, { scaleY: leftFillAnim }] }]} />
                 </View>
@@ -841,7 +853,7 @@ export default function GameplayScreen() {
               </View>
 
               <View style={styles.imageCardCol}>
-                <View style={[styles.imageWrapper, tappedSide === 'right' && { borderColor: result?.was_correct ? colors.correct : colors.incorrect }]}>
+                <View style={[styles.imageWrapper, tappedSide === 'right' && { borderColor: colorRevealed ? (result?.was_correct ? colors.correct : colors.incorrect) : '#ffffff' }]}>
                   {task && <Image source={{ uri: rightUrl }} style={styles.image} resizeMode="cover" />}
                   <Animated.View style={[StyleSheet.absoluteFillObject, { backgroundColor: rightFillColor, transform: [{ translateY: rightFillTranslateY }, { scaleY: rightFillAnim }] }]} />
                 </View>
