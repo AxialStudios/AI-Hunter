@@ -491,6 +491,14 @@ export default function GameplayScreen() {
     return () => { loop.stop(); nextPairPulse.setValue(0); };
   }, [showNextPairPulse]);
 
+  async function handleTutorialSkip() {
+    light();
+    await AsyncStorage.setItem('ai_hunter_tutorial_done', '1');
+    playingOpacity.setValue(1);
+    setTutorialStep(0);
+    revealTabBar();
+  }
+
   async function advanceTutorial() {
     if (tutorialStep === 'cinematic') {
       // playingOpacity was 0 during the cinematic — fade the playing layer back in
@@ -791,6 +799,16 @@ export default function GameplayScreen() {
           style={[StyleSheet.absoluteFill, { opacity: playingOpacity }]}
           pointerEvents={phase === 'playing' ? 'box-none' : 'none'}
         >
+          {/* Tutorial skip — remove before shipping */}
+          {tutorialStep && tutorialStep !== 0 && tutorialStep !== 'cinematic' && (
+            <TouchableOpacity
+              style={[styles.tutorialSkipBtn, { top: insets.top + 14 }]}
+              onPress={handleTutorialSkip}
+              activeOpacity={0.6}
+            >
+              <Text style={styles.tutorialSkipText}>Skip</Text>
+            </TouchableOpacity>
+          )}
           <View style={[styles.layer, { paddingTop: insets.top + 16, paddingBottom: insets.bottom }]}>
             {/* Top section: fixed height matching results verdict block + gap
                 so the imageRow sits at the same Y in both playing and results */}
@@ -1170,6 +1188,7 @@ export default function GameplayScreen() {
         }
         onAdvance={advanceTutorial}
         selectedSide={selectedSide}
+        promptAnim={tutorialPromptAnim}
       />
 
       {/* ── ZOOM OVERLAY ─ always in native layer so image stays GPU-composited ── */}
@@ -1296,7 +1315,9 @@ const styles = StyleSheet.create({
   playingBottom: { flex: 1, justifyContent: 'flex-end' },
   prompt:        { fontSize: 23, fontFamily: fonts.semiBold, color: colors.textPrimary, textAlign: 'center', paddingHorizontal: 16 },
   tutorialPrompt: { fontSize: 27, fontFamily: fonts.bold, color: colors.textPrimary, textAlign: 'center', paddingHorizontal: 16 },
-  tutorialHint:   { fontSize: 14, fontFamily: fonts.regular, color: colors.textPrimary, textAlign: 'center' },
+  tutorialHint:      { fontSize: 14, fontFamily: fonts.regular, color: colors.textPrimary, textAlign: 'center' },
+  tutorialSkipBtn:   { position: 'absolute', right: 20, zIndex: 10 },
+  tutorialSkipText:  { fontSize: 14, fontFamily: fonts.medium, color: 'rgba(255,255,255,0.4)' },
   errorText:     { color: colors.incorrect, fontSize: 16, fontFamily: fonts.medium, textAlign: 'center', paddingHorizontal: 16 },
 
   // ── Results layer ─────────────────────────────────────────────

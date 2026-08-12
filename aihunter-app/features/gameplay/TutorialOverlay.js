@@ -13,12 +13,12 @@ const GHOST_H = Math.floor(CARD_H * 0.52);
 // playing layer paddingTop = 16; playingTop height = 164
 const IMAGE_TOP_BASE = 16 + 164;
 
-export default function TutorialOverlay({ step, onAdvance, selectedSide }) {
+export default function TutorialOverlay({ step, onAdvance, selectedSide, promptAnim }) {
   const insets = useSafeAreaInsets();
 
   if (!step || step === 0) return null;
   if (step === 'cinematic') return <CinematicScreen onAdvance={onAdvance} insets={insets} />;
-  if (step === 'pick')      return <PickOverlay insets={insets} />;
+  if (step === 'pick')      return <PickOverlay insets={insets} opacity={promptAnim} />;
   if (step === 'zoom')      return <ZoomOverlay insets={insets} selectedSide={selectedSide} />;
   return null;
 }
@@ -58,19 +58,13 @@ function CinematicScreen({ onAdvance, insets }) {
   );
 }
 
-function PickOverlay({ insets }) {
-  const fadeIn = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(fadeIn, { toValue: 1, duration: 220, useNativeDriver: true }).start();
-  }, []);
-
+function PickOverlay({ insets, opacity }) {
   const imageTop    = insets.top + IMAGE_TOP_BASE;
   const imageBottom = imageTop + CARD_H;
   const DIM = 'rgba(0,0,0,0.82)';
 
   return (
-    <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: fadeIn }]} pointerEvents="box-none">
+    <Animated.View style={[StyleSheet.absoluteFillObject, { opacity }]} pointerEvents="box-none">
       <View style={{ position: 'absolute', top: imageTop,    left: 0,  width: 16, height: CARD_H, backgroundColor: DIM }} pointerEvents="none" />
       <View style={{ position: 'absolute', top: imageTop,    right: 0, width: 16, height: CARD_H, backgroundColor: DIM }} pointerEvents="none" />
       <View style={{ position: 'absolute', top: imageBottom, left: 0,  right: 0,  bottom: 0,      backgroundColor: DIM }} pointerEvents="none" />
@@ -79,10 +73,12 @@ function PickOverlay({ insets }) {
 }
 
 function ZoomOverlay({ insets, selectedSide }) {
+  const fadeIn       = useRef(new Animated.Value(0)).current;
   const pulseScale   = useRef(new Animated.Value(1)).current;
   const pulseOpacity = useRef(new Animated.Value(0.9)).current;
 
   useEffect(() => {
+    Animated.timing(fadeIn, { toValue: 1, duration: 200, useNativeDriver: true }).start();
     const loop = Animated.loop(
       Animated.parallel([
         Animated.sequence([
@@ -111,7 +107,7 @@ function ZoomOverlay({ insets, selectedSide }) {
   const RING_R   = 17;                           // snug around 25pt button; stays inside card top
 
   return (
-    <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
+    <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: fadeIn }]} pointerEvents="box-none">
       {/* Dim only from the image row downward — playingTop stays clear for instruction text */}
       <View
         style={{ position: 'absolute', top: imageTop, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.72)' }}
@@ -134,7 +130,7 @@ function ZoomOverlay({ insets, selectedSide }) {
         }}
         pointerEvents="none"
       />
-    </View>
+    </Animated.View>
   );
 }
 
