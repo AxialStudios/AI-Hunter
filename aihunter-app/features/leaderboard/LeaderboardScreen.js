@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   row:  { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#1A1A1A' },
 
   rankCircle:  { width: 28, alignItems: 'center' },
-  rankNum:     { fontSize: 13, fontFamily: fonts.semiBold, color: colors.textTertiary },
+  rankNum:     { fontSize: 13, fontFamily: fonts.semiBold, color: colors.textPrimary },
 
   avatar:     { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontSize: 14, fontFamily: fonts.bold, color: colors.textSecondary },

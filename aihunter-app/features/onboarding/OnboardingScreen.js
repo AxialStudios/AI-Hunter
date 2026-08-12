@@ -57,6 +57,10 @@ export default function OnboardingScreen({ navigation }) {
   const stepValue = [ageRange, region, fluency][step];
   const canContinue = !!stepValue && !under13;
 
+  function handleSkip() {
+    navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+  }
+
   function handleSelect(value) {
     light();
     if (step === 0) setAgeRange(value);
@@ -102,7 +106,9 @@ export default function OnboardingScreen({ navigation }) {
             <View key={i} style={[styles.progressSegment, i <= step && styles.progressActive]} />
           ))}
         </View>
-        <View style={styles.backBtn} />
+        <TouchableOpacity style={styles.skipBtn} onPress={handleSkip} activeOpacity={0.6}>
+          <Text style={styles.skipText}>Skip</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Illustration + Question: fixed above pills so spacing is always consistent */}
@@ -180,6 +186,8 @@ const styles = StyleSheet.create({
 
   header:             { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16, gap: 12 },
   backBtn:            { width: 36, alignItems: 'flex-start' },
+  skipBtn:            { width: 36, alignItems: 'flex-end' },
+  skipText:           { fontSize: 14, fontFamily: fonts.medium, color: colors.textSecondary },
   backArrow:          { fontSize: 22, color: colors.textPrimary },
   progressRow:        { flex: 1, flexDirection: 'row', gap: 6 },
   progressSegment:    { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.surface2 },

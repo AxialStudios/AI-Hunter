@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
 
   loadingCenter: { paddingVertical: 20, alignItems: 'center', flex: 1 },
 
-  sectionLabel: { fontSize: 11, fontFamily: fonts.semiBold, color: colors.textTertiary, letterSpacing: 2, marginBottom: 12 },
+  sectionLabel: { fontSize: 13, fontFamily: fonts.semiBold, color: colors.textPrimary, letterSpacing: 2, marginBottom: 12 },
 
   emptyState: { paddingVertical: 32, alignItems: 'center', marginBottom: 28 },
   emptyText:  { fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
