@@ -800,7 +800,7 @@ export default function GameplayScreen() {
           pointerEvents={phase === 'playing' ? 'box-none' : 'none'}
         >
           {/* Tutorial skip — remove before shipping */}
-          {tutorialStep && tutorialStep !== 0 && tutorialStep !== 'cinematic' && (
+          {!!tutorialStep && tutorialStep !== 'cinematic' && (
             <TouchableOpacity
               style={[styles.tutorialSkipBtn, { top: insets.top + 14 }]}
               onPress={handleTutorialSkip}
