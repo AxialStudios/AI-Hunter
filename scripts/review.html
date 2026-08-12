@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Hunter — Pair Review</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0d0d0d;
+    color: #f0f0f0;
+    min-height: 100vh;
+  }
+
+  /* ── Setup ── */
+  #setup {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 32px;
+    gap: 0;
+  }
+  #setup h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+  #setup .sub { color: #666; font-size: 14px; margin-bottom: 40px; text-align: center; }
+  .field { width: 440px; margin-bottom: 20px; }
+  .field label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: #666; margin-bottom: 6px; }
+  .field input {
+    width: 100%; padding: 12px 14px; background: #161616; border: 1px solid #2a2a2a;
+    border-radius: 10px; color: #f0f0f0; font-size: 14px; outline: none;
+  }
+  .field input:focus { border-color: #444; }
+  #loadBtn {
+    margin-top: 8px; padding: 14px 44px; background: #f0f0f0; color: #0d0d0d;
+    border: none; border-radius: 50px; font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  #loadBtn:hover { background: #ddd; }
+  #setupError { color: #ff6b6b; font-size: 13px; margin-top: 16px; }
+
+  /* ── Review ── */
+  #review { display: none; flex-direction: column; min-height: 100vh; }
+
+  .top-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 24px; border-bottom: 1px solid #1a1a1a; flex-shrink: 0;
+  }
+  .top-bar h2 { font-size: 16px; font-weight: 600; }
+  .counter { font-size: 13px; color: #666; }
+  .progress-track {
+    height: 3px; background: #1a1a1a; flex-shrink: 0;
+  }
+  .progress-fill {
+    height: 100%; background: #f0f0f0;
+    transition: width 0.3s ease;
+  }
+
+  /* ── Image area ── */
+  .images {
+    display: flex; gap: 12px; padding: 20px 24px; flex: 1;
+    justify-content: center; align-items: flex-start;
+  }
+  .card {
+    flex: 1; max-width: 560px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .card-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: .12em;
+    color: #555; text-align: center;
+  }
+  .img-wrap {
+    position: relative; aspect-ratio: 1 / 1; border-radius: 12px;
+    overflow: hidden; background: #1a1a1a;
+  }
+  .img-wrap img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .img-loading {
+    position: absolute; inset: 0; display: flex; align-items: center;
+    justify-content: center; color: #333; font-size: 13px;
+  }
+
+  /* ── Meta ── */
+  .meta {
+    padding: 0 24px 16px; max-width: 1152px; margin: 0 auto; width: 100%;
+  }
+  .meta-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 8px 20px; background: #111; border-radius: 12px;
+    padding: 14px 18px; border: 1px solid #1e1e1e;
+  }
+  .meta-item label { font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: #555; display: block; margin-bottom: 3px; }
+  .meta-item span  { font-size: 13px; color: #bbb; line-height: 1.45; }
+  .meta-item.wide  { grid-column: 1 / -1; }
+
+  /* ── Actions ── */
+  .actions {
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    padding: 16px 24px 24px; flex-shrink: 0;
+  }
+  .action-btn {
+    padding: 11px 28px; border-radius: 14px; font-size: 15px; font-weight: 600;
+    border: none; cursor: pointer; transition: opacity .15s;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  .btn-main { font-size: 15px; font-weight: 600; }
+  .btn-hint { font-size: 11px; font-weight: 400; opacity: .6; }
+  .action-btn:hover { opacity: .85; }
+  .action-btn:disabled { opacity: .35; cursor: default; }
+  .btn-approve { background: #16a34a; color: #fff; }
+  .btn-skip    { background: #1e1e1e; color: #aaa; border: 1px solid #2a2a2a; }
+  .btn-reject  { background: #b91c1c; color: #fff; }
+
+  .kbd {
+    display: inline-block; background: rgba(255,255,255,.08); border-radius: 4px;
+    padding: 1px 5px; font-size: 11px; font-family: monospace;
+  }
+
+  /* ── Done screen ── */
+  #done {
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 32px; gap: 12px; text-align: center;
+  }
+  #done h2 { font-size: 24px; font-weight: 700; }
+  #done p  { color: #666; font-size: 14px; }
+  .summary-row { display: flex; gap: 24px; margin-top: 12px; }
+  .summary-item { text-align: center; }
+  .summary-item .num { font-size: 32px; font-weight: 700; }
+  .summary-item .lbl { font-size: 12px; color: #555; margin-top: 2px; }
+  .num-approved { color: #16a34a; }
+  .num-rejected { color: #b91c1c; }
+  .num-skipped  { color: #666; }
+  #restartBtn {
+    margin-top: 20px; padding: 12px 32px; background: #1e1e1e; color: #aaa;
+    border: 1px solid #2a2a2a; border-radius: 50px; font-size: 14px;
+    cursor: pointer;
+  }
+  #restartBtn:hover { background: #2a2a2a; }
+</style>
+</head>
+<body>
+
+<!-- ── Setup ── -->
+<div id="setup">
+  <h1>Pair Review</h1>
+  <p class="sub">Review pending image pairs before they go live.</p>
+
+  <div class="field">
+    <label>Supabase URL</label>
+    <input id="supUrl" type="text" placeholder="https://xxxxx.supabase.co" autocomplete="off" spellcheck="false" />
+  </div>
+  <div class="field">
+    <label>Service Role Key</label>
+    <input id="supKey" type="password" placeholder="eyJ..." autocomplete="off" spellcheck="false" />
+  </div>
+
+  <button id="loadBtn" onclick="loadPairs()">Load pending pairs</button>
+  <div id="setupError"></div>
+</div>
+
+<!-- ── Review ── -->
+<div id="review">
+  <div class="top-bar">
+    <h2>AI Hunter — Pair Review</h2>
+    <span class="counter" id="counter"></span>
+  </div>
+  <div class="progress-track">
+    <div class="progress-fill" id="progressFill" style="width:0%"></div>
+  </div>
+
+  <div class="images" id="imagesRow">
+    <div class="card">
+      <div class="card-label">Real</div>
+      <div class="img-wrap">
+        <div class="img-loading" id="realLoading">loading…</div>
+        <img id="realImg" src="" alt="Real" style="display:none" onload="imgLoaded('real')" />
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">AI</div>
+      <div class="img-wrap">
+        <div class="img-loading" id="aiLoading">loading…</div>
+        <img id="aiImg" src="" alt="AI" style="display:none" onload="imgLoaded('ai')" />
+      </div>
+    </div>
+  </div>
+
+  <div class="meta">
+    <div class="meta-grid">
+      <div class="meta-item">
+        <label>Category</label>
+        <span id="metaCategory">—</span>
+      </div>
+      <div class="meta-item">
+        <label>Difficulty</label>
+        <span id="metaDifficulty">—</span>
+      </div>
+      <div class="meta-item">
+        <label>Model</label>
+        <span id="metaModel">—</span>
+      </div>
+      <div class="meta-item">
+        <label>Seed votes (real / ai)</label>
+        <span id="metaSeeds">—</span>
+      </div>
+      <div class="meta-item wide">
+        <label>Generation prompt</label>
+        <span id="metaPrompt">—</span>
+      </div>
+      <div class="meta-item wide">
+        <label>Source</label>
+        <span id="metaSource">—</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="action-btn btn-reject" onclick="decide('rejected')" id="rejectBtn">
+      <span class="btn-main">Reject</span>
+      <span class="btn-hint">pair is bad, don't publish · <span class="kbd">R</span></span>
+    </button>
+    <button class="action-btn btn-skip" onclick="decide('skip')" id="skipBtn">
+      <span class="btn-main">Skip</span>
+      <span class="btn-hint">decide later · <span class="kbd">S</span></span>
+    </button>
+    <button class="action-btn btn-approve" onclick="decide('active')" id="approveBtn">
+      <span class="btn-main">Approve</span>
+      <span class="btn-hint">publish to game · <span class="kbd">A</span></span>
+    </button>
+  </div>
+</div>
+
+<!-- ── Done ── -->
+<div id="done">
+  <h2>Review complete</h2>
+  <p>All pending pairs have been reviewed.</p>
+  <div class="summary-row">
+    <div class="summary-item">
+      <div class="num num-approved" id="sumApproved">0</div>
+      <div class="lbl">Approved</div>
+    </div>
+    <div class="summary-item">
+      <div class="num num-rejected" id="sumRejected">0</div>
+      <div class="lbl">Rejected</div>
+    </div>
+    <div class="summary-item">
+      <div class="num num-skipped" id="sumSkipped">0</div>
+      <div class="lbl">Skipped</div>
+    </div>
+  </div>
+  <button id="restartBtn" onclick="restart()">Review another batch</button>
+</div>
+
+<script>
+  let pairs   = [];
+  let idx     = 0;
+  let supUrl  = '';
+  let supKey  = '';
+  let counts  = { active: 0, rejected: 0, skip: 0 };
+  let busy    = false;
+
+  // Restore saved credentials
+  window.addEventListener('DOMContentLoaded', () => {
+    const savedUrl = localStorage.getItem('aih_sup_url');
+    const savedKey = localStorage.getItem('aih_sup_key');
+    if (savedUrl) document.getElementById('supUrl').value = savedUrl;
+    if (savedKey) document.getElementById('supKey').value = savedKey;
+  });
+
+  async function loadPairs() {
+    supUrl = document.getElementById('supUrl').value.trim().replace(/\/$/, '');
+    supKey = document.getElementById('supKey').value.trim();
+    const errEl = document.getElementById('setupError');
+    errEl.textContent = '';
+
+    if (!supUrl || !supKey) {
+      errEl.textContent = 'Please fill in both fields.';
+      return;
+    }
+
+    document.getElementById('loadBtn').textContent = 'Loading…';
+    document.getElementById('loadBtn').disabled = true;
+
+    try {
+      const res = await fetch(
+        `${supUrl}/rest/v1/tasks?approval_status=eq.pending&select=*&order=created_at.asc`,
+        { headers: { apikey: supKey, Authorization: `Bearer ${supKey}` } }
+      );
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(`${res.status}: ${t.slice(0, 120)}`);
+      }
+      pairs = await res.json();
+    } catch (e) {
+      errEl.textContent = 'Failed to load: ' + e.message;
+      document.getElementById('loadBtn').textContent = 'Load pending pairs';
+      document.getElementById('loadBtn').disabled = false;
+      return;
+    }
+
+    if (!pairs.length) {
+      errEl.textContent = 'No pending pairs found. Run generate.js first.';
+      document.getElementById('loadBtn').textContent = 'Load pending pairs';
+      document.getElementById('loadBtn').disabled = false;
+      return;
+    }
+
+    // Save credentials for next time
+    localStorage.setItem('aih_sup_url', supUrl);
+    localStorage.setItem('aih_sup_key', supKey);
+
+    idx = 0;
+    counts = { active: 0, rejected: 0, skip: 0 };
+    document.getElementById('setup').style.display = 'none';
+    document.getElementById('review').style.display = 'flex';
+    showPair();
+  }
+
+  function showPair() {
+    if (idx >= pairs.length) { showDone(); return; }
+    const pair = pairs[idx];
+
+    updateProgress();
+
+    // Meta
+    document.getElementById('metaCategory').textContent  = pair.category   ?? '—';
+    document.getElementById('metaDifficulty').textContent = pair.difficulty_tier ?? '—';
+    document.getElementById('metaModel').textContent     = pair.ai_model_engine ?? '—';
+    document.getElementById('metaSeeds').textContent     =
+      `${pair.seed_real_votes ?? '—'} / ${pair.seed_ai_votes ?? '—'}`;
+    document.getElementById('metaPrompt').textContent    = pair.generation_prompt ?? '—';
+
+    const src = pair.source_attribution ?? '';
+    const srcEl = document.getElementById('metaSource');
+    if (src) {
+      srcEl.innerHTML = `<a href="${escHtml(src)}" target="_blank" rel="noopener" style="color:#4a9eff">${escHtml(src.split('?')[0])}</a>`;
+    } else {
+      srcEl.textContent = '—';
+    }
+
+    // Images
+    ['real', 'ai'].forEach(side => {
+      const imgEl     = document.getElementById(side + 'Img');
+      const loadingEl = document.getElementById(side + 'Loading');
+      imgEl.style.display = 'none';
+      loadingEl.style.display = 'flex';
+      imgEl.src = side === 'real' ? pair.real_image_url : pair.ai_image_url;
+    });
+
+    setButtons(false);
+  }
+
+  function imgLoaded(side) {
+    document.getElementById(side + 'Img').style.display   = 'block';
+    document.getElementById(side + 'Loading').style.display = 'none';
+  }
+
+  function updateProgress() {
+    const pct = pairs.length ? (idx / pairs.length) * 100 : 0;
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('counter').textContent =
+      `${idx + 1} of ${pairs.length}`;
+  }
+
+  function setButtons(disabled) {
+    ['approveBtn', 'skipBtn', 'rejectBtn'].forEach(id => {
+      document.getElementById(id).disabled = disabled;
+    });
+  }
+
+  async function decide(action) {
+    if (busy) return;
+    busy = true;
+    setButtons(true);
+
+    const pair = pairs[idx];
+
+    if (action !== 'skip') {
+      try {
+        const res = await fetch(
+          `${supUrl}/rest/v1/tasks?id=eq.${encodeURIComponent(pair.id)}`,
+          {
+            method: 'PATCH',
+            headers: {
+              apikey: supKey,
+              Authorization: `Bearer ${supKey}`,
+              'Content-Type': 'application/json',
+              Prefer: 'return=minimal',
+            },
+            body: JSON.stringify({ approval_status: action }),
+          }
+        );
+        if (!res.ok) {
+          const t = await res.text();
+          alert(`Update failed: ${t.slice(0, 200)}`);
+          setButtons(false);
+          busy = false;
+          return;
+        }
+      } catch (e) {
+        alert('Network error: ' + e.message);
+        setButtons(false);
+        busy = false;
+        return;
+      }
+    }
+
+    counts[action] = (counts[action] ?? 0) + 1;
+    idx++;
+    busy = false;
+    showPair();
+  }
+
+  function showDone() {
+    document.getElementById('review').style.display = 'none';
+    document.getElementById('done').style.display   = 'flex';
+    document.getElementById('sumApproved').textContent = counts.active    ?? 0;
+    document.getElementById('sumRejected').textContent = counts.rejected  ?? 0;
+    document.getElementById('sumSkipped').textContent  = counts.skip      ?? 0;
+  }
+
+  function restart() {
+    document.getElementById('done').style.display  = 'none';
+    document.getElementById('setup').style.display = 'flex';
+    document.getElementById('loadBtn').textContent = 'Load pending pairs';
+    document.getElementById('loadBtn').disabled    = false;
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', e => {
+    if (document.getElementById('review').style.display === 'none') return;
+    if (busy) return;
+    if (e.key === 'a' || e.key === 'A') decide('active');
+    if (e.key === 's' || e.key === 'S') decide('skip');
+    if (e.key === 'r' || e.key === 'R') decide('rejected');
+  });
+</script>
+</body>
+</html>
