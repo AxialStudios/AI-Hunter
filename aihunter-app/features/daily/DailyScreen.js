@@ -85,7 +85,6 @@ export default function DailyScreen() {
 
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.screenLabel}>YOUR ACTIVITY</Text>
           <Text style={styles.date}>{TODAY_LABEL}</Text>
         </View>
 

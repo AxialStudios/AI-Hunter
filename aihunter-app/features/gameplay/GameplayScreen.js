@@ -452,7 +452,7 @@ export default function GameplayScreen() {
     if (!votesBoxTapped) return;
     // Hint text fades in immediately
     Animated.timing(votesHintOpacity, { toValue: 1, duration: 280, useNativeDriver: true }).start();
-    // Circle springs in after 500ms delay, then sonar-ping ripple
+    // Circle springs in after 1s delay — give people time to read the hint text
     const timeout = setTimeout(() => {
       Animated.spring(circleEntryScale, {
         toValue: 1,
@@ -477,7 +477,7 @@ export default function GameplayScreen() {
         );
         rippleLoopRef.current.start();
       });
-    }, 500);
+    }, 1000);
     return () => clearTimeout(timeout);
   }, [votesBoxTapped]);
 

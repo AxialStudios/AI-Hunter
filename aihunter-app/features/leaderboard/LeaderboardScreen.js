@@ -65,7 +65,7 @@ export default function LeaderboardScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.screenLabel}>RANKINGS</Text>
+        <Text style={styles.title}>Rankings</Text>
         <View style={styles.toggle}>
           <TouchableOpacity
             style={[styles.toggleBtn, tab === 'week' && styles.toggleBtnActive]}
@@ -147,8 +147,8 @@ export default function LeaderboardScreen() {
 const styles = StyleSheet.create({
   safe:   { flex: 1, backgroundColor: colors.bg },
 
-  header:      { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 20, gap: 16 },
-  screenLabel: { fontSize: 11, fontFamily: fonts.semiBold, color: colors.textTertiary, letterSpacing: 2 },
+  header: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 20, gap: 16 },
+  title:  { fontSize: 28, fontFamily: fonts.bold, color: colors.textPrimary },
   toggle:      { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: radius.pill, padding: 4 },
   toggleBtn:        { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: radius.pill },
   toggleBtnActive:  { backgroundColor: '#2E2E2E' },
