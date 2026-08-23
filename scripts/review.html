@@ -57,9 +57,26 @@
     transition: width 0.3s ease;
   }
 
+  /* ── Tell warning banner ── */
+  .tell-warning {
+    display: flex; align-items: flex-start; gap: 10px;
+    margin: 12px 24px 0; padding: 11px 14px;
+    background: rgba(202, 138, 4, 0.12);
+    border: 1px solid rgba(202, 138, 4, 0.35);
+    border-radius: 10px; font-size: 12px; line-height: 1.55; color: #d4a017;
+  }
+  .tell-warning .warn-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+  .tell-warning strong { color: #f0c040; font-weight: 700; }
+  .tell-warning.no-tells {
+    background: rgba(100, 100, 100, 0.1);
+    border-color: rgba(100, 100, 100, 0.25);
+    color: #777;
+  }
+  .tell-warning.no-tells strong { color: #999; }
+
   /* ── Image area ── */
   .images {
-    display: flex; gap: 12px; padding: 20px 24px; flex: 1;
+    display: flex; gap: 12px; padding: 16px 24px; flex: 1;
     justify-content: center; align-items: flex-start;
   }
   .card {
@@ -67,7 +84,8 @@
   }
   .card-label {
     font-size: 10px; text-transform: uppercase; letter-spacing: .12em;
-    color: #555; text-align: center;
+    color: #555; text-align: center; display: flex; align-items: center;
+    justify-content: center; gap: 8px;
   }
   .img-wrap {
     position: relative; aspect-ratio: 1 / 1; border-radius: 12px;
@@ -81,9 +99,75 @@
     justify-content: center; color: #333; font-size: 13px;
   }
 
+  /* ── Tell circles on AI image ── */
+  .tell-dot {
+    position: absolute;
+    width: var(--tell-size, 30px); height: var(--tell-size, 30px);
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    border: 2.5px solid rgba(255,255,255,0.88);
+    transform: translate(-50%, -50%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: calc(var(--tell-size, 30px) * 0.37);
+    font-weight: 800; color: white;
+    pointer-events: none;
+    box-shadow: 0 0 0 4px rgba(255,255,255,0.10), 0 2px 8px rgba(0,0,0,0.5);
+    animation: tellpulse 2.2s ease-in-out infinite;
+    z-index: 5;
+    transition: opacity 0.2s, width 0.1s, height 0.1s;
+  }
+  .tell-dot:nth-child(2) { animation-delay: 0.6s; }
+  .tell-dot:nth-child(3) { animation-delay: 1.2s; }
+  @keyframes tellpulse {
+    0%,100% { box-shadow: 0 0 0 4px rgba(255,255,255,0.10), 0 2px 8px rgba(0,0,0,0.5); }
+    50%      { box-shadow: 0 0 0 9px rgba(255,255,255,0.04), 0 2px 8px rgba(0,0,0,0.5); }
+  }
+  .tells-hidden .tell-dot { opacity: 0; }
+
+  /* Tell title + description layout */
+  .tell-title { font-size: 12px; font-weight: 700; color: #e0e0e0; margin-bottom: 2px; }
+  .tell-desc  { font-size: 12px; color: #888; line-height: 1.5; }
+
+  /* Eye toggle button overlaid on AI image */
+  .eye-toggle {
+    position: absolute; top: 10px; right: 10px; z-index: 10;
+    width: 32px; height: 32px; border-radius: 8px;
+    background: rgba(13,13,13,0.75); backdrop-filter: blur(4px);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.7); font-size: 15px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, color 0.15s;
+  }
+  .eye-toggle:hover { background: rgba(40,40,40,0.9); color: white; }
+  .eye-toggle.hidden-state {
+    background: rgba(59,130,246,0.25);
+    border-color: rgba(59,130,246,0.5);
+    color: #60a5fa;
+  }
+  /* Scroll-to-resize hint */
+  .scroll-hint {
+    position: absolute; bottom: 10px; right: 10px; z-index: 10;
+    background: rgba(13,13,13,0.65); backdrop-filter: blur(4px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px; padding: 3px 8px;
+    font-size: 10px; color: rgba(255,255,255,0.35);
+    pointer-events: none; white-space: nowrap;
+    opacity: 0; transition: opacity 0.3s;
+  }
+  #aiImgWrap:hover .scroll-hint { opacity: 1; }
+
+  /* Tell count badge on AI card label */
+  .tell-count-badge {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.06em;
+    padding: 2px 6px; border-radius: 4px;
+    background: rgba(255,255,255,0.07);
+    color: #666; text-transform: uppercase;
+  }
+  .tell-count-badge.has-tells { background: rgba(202,138,4,0.15); color: #ca8a04; }
+
   /* ── Meta ── */
   .meta {
-    padding: 0 24px 16px; max-width: 1152px; margin: 0 auto; width: 100%;
+    padding: 0 24px 12px; max-width: 1152px; margin: 0 auto; width: 100%;
   }
   .meta-grid {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -94,10 +178,25 @@
   .meta-item span  { font-size: 13px; color: #bbb; line-height: 1.45; }
   .meta-item.wide  { grid-column: 1 / -1; }
 
+  /* Tell annotation rows in meta */
+  .tell-annotation-list { display: flex; flex-direction: column; gap: 5px; margin-top: 2px; }
+  .tell-annotation-row {
+    display: flex; align-items: flex-start; gap: 8px;
+    font-size: 12px; color: #bbb; line-height: 1.45;
+  }
+  .tell-num {
+    width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
+    background: rgba(255,255,255,0.12); border: 1.5px solid rgba(255,255,255,0.4);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 800; color: white; margin-top: 1px;
+  }
+  .tell-loc { color: #555; font-size: 11px; white-space: nowrap; }
+  .no-tells-note { font-size: 12px; color: #444; font-style: italic; }
+
   /* ── Actions ── */
   .actions {
     display: flex; align-items: center; justify-content: center; gap: 12px;
-    padding: 16px 24px 24px; flex-shrink: 0;
+    padding: 12px 24px 20px; flex-shrink: 0;
   }
   .action-btn {
     padding: 11px 28px; border-radius: 14px; font-size: 15px; font-weight: 600;
@@ -169,6 +268,12 @@
     <div class="progress-fill" id="progressFill" style="width:0%"></div>
   </div>
 
+  <!-- Tell warning banner (swapped out per pair) -->
+  <div class="tell-warning" id="tellWarning">
+    <span class="warn-icon">⚠</span>
+    <div id="tellWarningText"></div>
+  </div>
+
   <div class="images" id="imagesRow">
     <div class="card">
       <div class="card-label">Real</div>
@@ -178,10 +283,21 @@
       </div>
     </div>
     <div class="card">
-      <div class="card-label">AI</div>
-      <div class="img-wrap">
+      <div class="card-label" id="aiCardLabel">
+        <span>AI</span>
+        <span class="tell-count-badge" id="tellBadge"></span>
+      </div>
+      <div class="img-wrap" id="aiImgWrap">
         <div class="img-loading" id="aiLoading">loading…</div>
         <img id="aiImg" src="" alt="AI" style="display:none" onload="imgLoaded('ai')" />
+        <!-- Tell circles injected here by JS -->
+        <button class="eye-toggle" id="eyeToggle" onclick="toggleTells()" title="Toggle tell markers (V)" style="display:none">
+          <svg width="16" height="11" viewBox="0 0 16 11" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 1C4.2 1 1 5.5 1 5.5C1 5.5 4.2 10 8 10C11.8 10 15 5.5 15 5.5C15 5.5 11.8 1 8 1Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+            <circle cx="8" cy="5.5" r="2" fill="currentColor"/>
+          </svg>
+        </button>
+        <div class="scroll-hint">scroll to resize circles</div>
       </div>
     </div>
   </div>
@@ -208,6 +324,11 @@
         <label>Generation prompt</label>
         <span id="metaPrompt">—</span>
       </div>
+      <!-- AI-detected tells row -->
+      <div class="meta-item wide" id="tellsMetaRow">
+        <label>AI-detected tells (verify before approving)</label>
+        <div class="tell-annotation-list" id="tellsMetaList"></div>
+      </div>
       <div class="meta-item wide">
         <label>Source</label>
         <span id="metaSource">—</span>
@@ -218,7 +339,7 @@
   <div class="actions">
     <button class="action-btn btn-reject" onclick="decide('rejected')" id="rejectBtn">
       <span class="btn-main">Reject</span>
-      <span class="btn-hint">pair is bad, don't publish · <span class="kbd">R</span></span>
+      <span class="btn-hint">bad pair · <span class="kbd">R</span></span>
     </button>
     <button class="action-btn btn-skip" onclick="decide('skip')" id="skipBtn">
       <span class="btn-main">Skip</span>
@@ -259,8 +380,9 @@
   let supKey  = '';
   let counts  = { active: 0, rejected: 0, skip: 0 };
   let busy    = false;
+  let tellsVisible = true;
+  let tellSize = 30; // px, range 14–80
 
-  // Restore saved credentials
   window.addEventListener('DOMContentLoaded', () => {
     const savedUrl = localStorage.getItem('aih_sup_url');
     const savedKey = localStorage.getItem('aih_sup_key');
@@ -274,10 +396,7 @@
     const errEl = document.getElementById('setupError');
     errEl.textContent = '';
 
-    if (!supUrl || !supKey) {
-      errEl.textContent = 'Please fill in both fields.';
-      return;
-    }
+    if (!supUrl || !supKey) { errEl.textContent = 'Please fill in both fields.'; return; }
 
     document.getElementById('loadBtn').textContent = 'Loading…';
     document.getElementById('loadBtn').disabled = true;
@@ -287,10 +406,7 @@
         `${supUrl}/rest/v1/tasks?approval_status=eq.pending&select=*&order=created_at.asc`,
         { headers: { apikey: supKey, Authorization: `Bearer ${supKey}` } }
       );
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(`${res.status}: ${t.slice(0, 120)}`);
-      }
+      if (!res.ok) { const t = await res.text(); throw new Error(`${res.status}: ${t.slice(0, 120)}`); }
       pairs = await res.json();
     } catch (e) {
       errEl.textContent = 'Failed to load: ' + e.message;
@@ -306,12 +422,12 @@
       return;
     }
 
-    // Save credentials for next time
     localStorage.setItem('aih_sup_url', supUrl);
     localStorage.setItem('aih_sup_key', supKey);
 
     idx = 0;
     counts = { active: 0, rejected: 0, skip: 0 };
+    tellsVisible = true;
     document.getElementById('setup').style.display = 'none';
     document.getElementById('review').style.display = 'flex';
     showPair();
@@ -321,23 +437,30 @@
     if (idx >= pairs.length) { showDone(); return; }
     const pair = pairs[idx];
 
+    // Reset tells visibility each pair
+    tellsVisible = true;
+    document.getElementById('aiImgWrap').classList.remove('tells-hidden');
+    const eyeBtn = document.getElementById('eyeToggle');
+    eyeBtn.classList.remove('hidden-state');
+    eyeBtn.title = 'Hide tell markers (V)';
+
     updateProgress();
 
     // Meta
-    document.getElementById('metaCategory').textContent  = pair.category   ?? '—';
+    document.getElementById('metaCategory').textContent   = pair.category ?? '—';
     document.getElementById('metaDifficulty').textContent = pair.difficulty_tier ?? '—';
-    document.getElementById('metaModel').textContent     = pair.ai_model_engine ?? '—';
-    document.getElementById('metaSeeds').textContent     =
-      `${pair.seed_real_votes ?? '—'} / ${pair.seed_ai_votes ?? '—'}`;
-    document.getElementById('metaPrompt').textContent    = pair.generation_prompt ?? '—';
+    document.getElementById('metaModel').textContent      = pair.ai_model_engine ?? '—';
+    document.getElementById('metaSeeds').textContent      = `${pair.seed_real_votes ?? '—'} / ${pair.seed_ai_votes ?? '—'}`;
+    document.getElementById('metaPrompt').textContent     = pair.generation_prompt ?? '—';
 
     const src = pair.source_attribution ?? '';
     const srcEl = document.getElementById('metaSource');
-    if (src) {
-      srcEl.innerHTML = `<a href="${escHtml(src)}" target="_blank" rel="noopener" style="color:#4a9eff">${escHtml(src.split('?')[0])}</a>`;
-    } else {
-      srcEl.textContent = '—';
-    }
+    srcEl.innerHTML = src
+      ? `<a href="${escHtml(src)}" target="_blank" rel="noopener" style="color:#4a9eff">${escHtml(src.split('?')[0])}</a>`
+      : '—';
+
+    // Render tell annotations in meta + circles on image
+    renderTells(pair.tell_annotations);
 
     // Images
     ['real', 'ai'].forEach(side => {
@@ -351,16 +474,86 @@
     setButtons(false);
   }
 
+  function renderTells(annotations) {
+    const tells = Array.isArray(annotations) ? annotations : [];
+
+    // Remove old circles from AI wrap (keep img, loading, eye-toggle)
+    const wrap = document.getElementById('aiImgWrap');
+    wrap.querySelectorAll('.tell-dot').forEach(d => d.remove());
+
+    const badge  = document.getElementById('tellBadge');
+    const list   = document.getElementById('tellsMetaList');
+    const eyeBtn = document.getElementById('eyeToggle');
+    const warning = document.getElementById('tellWarning');
+    const warningText = document.getElementById('tellWarningText');
+
+    if (tells.length === 0) {
+      badge.textContent = 'No tells';
+      badge.className = 'tell-count-badge';
+      eyeBtn.style.display = 'none';
+      list.innerHTML = '<span class="no-tells-note">No tells detected — inspect carefully before approving, or reject if you can\'t find anything.</span>';
+      warning.className = 'tell-warning no-tells';
+      warningText.innerHTML = '<strong>No tells found by AI.</strong> The model found nothing to flag — inspect the AI image closely yourself. If you can\'t find any artifact, reject this pair.';
+      return;
+    }
+
+    badge.textContent = tells.length + (tells.length === 1 ? ' tell' : ' tells') + ' flagged';
+    badge.className = 'tell-count-badge has-tells';
+    eyeBtn.style.display = 'flex';
+
+    // Warning banner
+    warning.className = 'tell-warning';
+    warningText.innerHTML =
+      '<strong>AI-detected — verify before approving.</strong> The circles show where GPT-4o flagged artifacts. ' +
+      'Zoom in and confirm each one is actually real. <strong>GPT-4o sometimes flags things that look completely fine</strong> — ' +
+      'if a circled area looks normal to you, it probably is. Only approve if you can confirm at least one tell exists.';
+
+    // Tell list in meta
+    list.innerHTML = tells.map((t, i) => {
+      const title = t.title ? t.title : deriveTitle(t.description);
+      const desc  = cleanDesc(t.description);
+      return `<div class="tell-annotation-row">
+        <div class="tell-num">${i + 1}</div>
+        <div>
+          <div class="tell-title">${escHtml(title)}</div>
+          <div class="tell-desc">${escHtml(desc)}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Circles on image — fall back to location text if x/y not stored
+    tells.forEach((t, i) => {
+      const coords = (typeof t.x === 'number' && typeof t.y === 'number')
+        ? { x: t.x, y: t.y }
+        : locToCoords(t.location);
+      const dot = document.createElement('div');
+      dot.className = 'tell-dot';
+      dot.dataset.index = i;
+      dot.style.left = (coords.x * 100) + '%';
+      dot.style.top  = (coords.y * 100) + '%';
+      dot.textContent = i + 1;
+      wrap.appendChild(dot);
+    });
+  }
+
   function imgLoaded(side) {
-    document.getElementById(side + 'Img').style.display   = 'block';
+    document.getElementById(side + 'Img').style.display    = 'block';
     document.getElementById(side + 'Loading').style.display = 'none';
+  }
+
+  function toggleTells() {
+    tellsVisible = !tellsVisible;
+    const wrap   = document.getElementById('aiImgWrap');
+    const eyeBtn = document.getElementById('eyeToggle');
+    wrap.classList.toggle('tells-hidden', !tellsVisible);
+    eyeBtn.classList.toggle('hidden-state', !tellsVisible);
+    eyeBtn.title = tellsVisible ? 'Hide tell markers (V)' : 'Show tell markers (V)';
   }
 
   function updateProgress() {
     const pct = pairs.length ? (idx / pairs.length) * 100 : 0;
     document.getElementById('progressFill').style.width = pct + '%';
-    document.getElementById('counter').textContent =
-      `${idx + 1} of ${pairs.length}`;
+    document.getElementById('counter').textContent = `${idx + 1} of ${pairs.length}`;
   }
 
   function setButtons(disabled) {
@@ -415,9 +608,9 @@
   function showDone() {
     document.getElementById('review').style.display = 'none';
     document.getElementById('done').style.display   = 'flex';
-    document.getElementById('sumApproved').textContent = counts.active    ?? 0;
-    document.getElementById('sumRejected').textContent = counts.rejected  ?? 0;
-    document.getElementById('sumSkipped').textContent  = counts.skip      ?? 0;
+    document.getElementById('sumApproved').textContent = counts.active   ?? 0;
+    document.getElementById('sumRejected').textContent = counts.rejected ?? 0;
+    document.getElementById('sumSkipped').textContent  = counts.skip     ?? 0;
   }
 
   function restart() {
@@ -428,16 +621,58 @@
   }
 
   function escHtml(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  // Keyboard shortcuts
+  // Location text → x/y coords (matches tell-review.html)
+  const LOC_COORDS = {
+    'center':           {x:.50,y:.50}, 'upper center':  {x:.50,y:.22},
+    'lower center':     {x:.50,y:.78}, 'upper left':    {x:.25,y:.22},
+    'upper right':      {x:.75,y:.22}, 'lower left':    {x:.25,y:.78},
+    'lower right':      {x:.75,y:.78}, 'left':          {x:.18,y:.50},
+    'right':            {x:.82,y:.50}, 'foreground':    {x:.50,y:.70},
+    'background':       {x:.50,y:.30}, 'upper':         {x:.50,y:.20},
+    'lower':            {x:.50,y:.80},
+  };
+  function locToCoords(loc) { return LOC_COORDS[(loc||'').toLowerCase().trim()] || {x:.50,y:.50}; }
+
+  // Derive a short title from a raw description (fallback for old annotations without title field)
+  const SKIP = new Set(['a','an','the','its','their','this','that','is','are','was','with','and','or','of','in','on','at','to']);
+  function deriveTitle(desc) {
+    const words = (desc||'').replace(/[-—]/g,' ').trim().split(/\s+/)
+      .filter(w => w.length > 1 && !SKIP.has(w.toLowerCase()));
+    return words.slice(0, 2)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ') || 'Visual artifact';
+  }
+
+  // Clean a description: only strip " — location" suffixes from old annotation format, ensure period
+  function cleanDesc(desc) {
+    let d = (desc||'').trim();
+    // Strip trailing dash+location only when the location is the last thing (old format)
+    d = d.replace(/\s*[-—–]+\s*(center|upper center|lower center|upper left|upper right|lower left|lower right|left|right|foreground|background|main subject area)\s*\.?$/i, '').trim();
+    if (d && !d.endsWith('.')) d += '.';
+    return d;
+  }
+
+  // Scroll on AI image to resize circles
+  document.getElementById('aiImgWrap').addEventListener('wheel', e => {
+    if (!document.querySelectorAll('.tell-dot').length) return;
+    e.preventDefault();
+    tellSize = Math.max(14, Math.min(80, tellSize + (e.deltaY < 0 ? 4 : -4)));
+    document.getElementById('aiImgWrap').style.setProperty('--tell-size', tellSize + 'px');
+  }, { passive: false });
+
   document.addEventListener('keydown', e => {
     if (document.getElementById('review').style.display === 'none') return;
     if (busy) return;
     if (e.key === 'a' || e.key === 'A') decide('active');
     if (e.key === 's' || e.key === 'S') decide('skip');
     if (e.key === 'r' || e.key === 'R') decide('rejected');
+    if (e.key === 'v' || e.key === 'V') {
+      const dots = document.querySelectorAll('.tell-dot');
+      if (dots.length) toggleTells();
+    }
   });
 </script>
 </body>

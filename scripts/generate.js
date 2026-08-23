@@ -38,6 +38,7 @@
 
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { createClient }               = require('@supabase/supabase-js');
+const { GoogleGenAI }                = require('@google/genai');
 const Replicate                      = require('replicate');
 const OpenAI                         = require('openai');
 const sharp                          = require('sharp');
@@ -45,13 +46,14 @@ const https                          = require('https');
 const http                           = require('http');
 const fs                             = require('fs');
 const path                           = require('path');
+const { annotateAiImage }            = require('./annotate');
 
 // ── Load root .env ────────────────────────────────────────────────────────────
 const envPath = path.join(__dirname, '..', '.env');
 if (fs.existsSync(envPath)) {
   for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
     const m = line.match(/^([A-Z0-9_]+)=(.+)$/);
-    if (m && !process.env[m[1]]) {
+    if (m) {
       process.env[m[1]] = m[2].replace(/^['"]|['"]$/g, '').trim();
     }
   }
@@ -74,11 +76,14 @@ const MODEL_KEY  = argv.model      ?? 'schnell';
 
 // ── Model registry ─────────────────────────────────────────────────────────────
 const MODELS = {
-  schnell:     { backend: 'replicate', id: 'black-forest-labs/flux-schnell' },
-  dev:         { backend: 'replicate', id: 'black-forest-labs/flux-dev' },
-  pro:         { backend: 'replicate', id: 'black-forest-labs/flux-pro' },
-  dalle3:      { backend: 'openai',    id: 'dall-e-3' },
-  'gpt-image': { backend: 'openai',    id: 'gpt-image-1' },
+  schnell:          { backend: 'replicate', id: 'black-forest-labs/flux-schnell' },
+  dev:              { backend: 'replicate', id: 'black-forest-labs/flux-dev' },
+  pro:              { backend: 'replicate', id: 'black-forest-labs/flux-pro' },
+  dalle3:           { backend: 'openai',    id: 'dall-e-3' },
+  'gpt-image':      { backend: 'openai',    id: 'gpt-image-1' },
+  'gpt-image-2':    { backend: 'openai',    id: 'gpt-image-2' },
+  'gemini-flash':   { backend: 'gemini',    id: 'gemini-3.1-flash-image' },
+  'gemini-pro':     { backend: 'gemini',    id: 'gemini-3-pro-image' },
 };
 
 const MODEL = MODELS[MODEL_KEY];
@@ -94,6 +99,7 @@ const REQUIRED_VARS = [
   'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY',
 ];
 if (MODEL.backend === 'replicate') REQUIRED_VARS.push('REPLICATE_API_TOKEN');
+if (MODEL.backend === 'gemini')    REQUIRED_VARS.push('GOOGLE_API_KEY');
 for (const v of REQUIRED_VARS) {
   if (!process.env[v]) { console.error(`Missing env var: ${v}`); process.exit(1); }
 }
@@ -127,8 +133,25 @@ const replicate = MODEL.backend === 'replicate'
   ? new Replicate({ auth: process.env.REPLICATE_API_TOKEN })
   : null;
 
+const gemini = MODEL.backend === 'gemini'
+  ? new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY })
+  : null;
+
 // ── Utilities ──────────────────────────────────────────────────────────────────
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function withRetry(fn, retries = 6, baseDelayMs = 4000) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (attempt === retries) throw err;
+      const wait = baseDelayMs * attempt;
+      process.stdout.write(`\n  [attempt ${attempt} failed: ${err.message.slice(0, 80)}]\n  retrying in ${wait / 1000}s ... `);
+      await sleep(wait);
+    }
+  }
+}
 
 function downloadBuffer(url, hops = 0) {
   return new Promise((resolve, reject) => {
@@ -191,12 +214,12 @@ async function uploadToR2(buf, key) {
 }
 
 // ── Unsplash ───────────────────────────────────────────────────────────────────
-async function searchUnsplash(query, count) {
-  const perPage = Math.min(count * 2, 30);
+async function searchUnsplash(query, page = 1) {
   const url = [
     'https://api.unsplash.com/search/photos',
     `?query=${encodeURIComponent(query)}`,
-    `&per_page=${perPage}`,
+    `&per_page=30`,
+    `&page=${page}`,
     '&content_filter=high',
     '&orientation=squarish',
   ].join('');
@@ -204,8 +227,7 @@ async function searchUnsplash(query, count) {
     Authorization: `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}`,
   });
   if (data.errors) throw new Error(`Unsplash API: ${data.errors.join(', ')}`);
-  if (!data.results?.length) throw new Error(`Unsplash found no results for "${query}"`);
-  return data.results.slice(0, count);
+  return { results: data.results ?? [], totalPages: data.total_pages ?? 0 };
 }
 
 // ── Prompt generation ──────────────────────────────────────────────────────────
@@ -242,10 +264,24 @@ async function generateAiImage(prompt) {
         prompt, aspect_ratio: '1:1', output_format: 'webp', num_outputs: 1,
       },
     };
-    const output = await replicate.run(MODEL.id, { input: inputs[MODEL.id] ?? { prompt } });
-    const raw = Array.isArray(output) ? output[0] : output;
-    // SDK v0.x returns a string; v1.x returns a FileOutput with .url() method
-    return typeof raw?.url === 'function' ? raw.url().toString() : raw.toString();
+
+    // Use predictions API directly so we get explicit status + error messages
+    // instead of a silent null from replicate.run()
+    const prediction = await replicate.predictions.create({
+      model: MODEL.id,
+      input: inputs[MODEL.id] ?? { prompt },
+    });
+    const completed = await replicate.wait(prediction, { interval: 2000 });
+
+    if (completed.status !== 'succeeded') {
+      throw new Error(`Replicate prediction ${completed.status}: ${completed.error ?? 'no error details'}`);
+    }
+
+    const raw = Array.isArray(completed.output) ? completed.output[0] : completed.output;
+    if (raw == null) throw new Error('Replicate succeeded but output was empty');
+    const url = typeof raw?.url === 'function' ? raw.url().toString() : raw.toString();
+    if (!url || !url.startsWith('http')) throw new Error(`Invalid URL from Replicate: "${url}"`);
+    return url;
   }
 
   if (MODEL.id === 'dall-e-3') {
@@ -255,11 +291,24 @@ async function generateAiImage(prompt) {
     return res.data[0].url;
   }
 
-  if (MODEL.id === 'gpt-image-1') {
+  if (MODEL.id === 'gpt-image-1' || MODEL.id === 'gpt-image-2') {
     const res = await openai.images.generate({
-      model: 'gpt-image-1', prompt, n: 1, size: '1024x1024',
+      model: MODEL.id, prompt, n: 1, size: '1024x1024',
     });
+    // These models return b64_json, not a URL
+    if (res.data[0].b64_json) return Buffer.from(res.data[0].b64_json, 'base64');
     return res.data[0].url;
+  }
+
+  if (MODEL.backend === 'gemini') {
+    const response = await gemini.models.generateContent({
+      model: MODEL.id,
+      contents: prompt,
+      config: { responseModalities: ['IMAGE'] },
+    });
+    const part = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+    if (!part?.inlineData?.data) throw new Error('Gemini returned no image data');
+    return Buffer.from(part.inlineData.data, 'base64');
   }
 
   throw new Error(`Unhandled model: ${MODEL.id}`);
@@ -274,65 +323,105 @@ async function run() {
   console.log(`  difficulty: ${DIFFICULTY}  (seed ${seeds.real}/${seeds.ai})`);
   console.log(`  model:      ${MODEL_KEY} → ${MODEL.id}\n`);
 
-  const photos = await searchUnsplash(QUERY, COUNT);
-  console.log(`  Found ${photos.length} photos on Unsplash\n`);
+  let succeeded = 0, failed = 0, page = 1;
 
-  let succeeded = 0, failed = 0;
+  // Keep paginating Unsplash until we've inserted COUNT new pairs.
+  // Already-in-DB photos are skipped silently and don't count against the target.
+  outer: while (succeeded + failed < COUNT) {
+    const { results, totalPages } = await searchUnsplash(QUERY, page);
 
-  for (let i = 0; i < photos.length; i++) {
-    const photo = photos[i];
-    const tag = `[${i + 1}/${photos.length}]`;
-    const desc = photo.alt_description ?? photo.description ?? '(no description)';
-    console.log(`${tag} ${photo.id} — ${desc}`);
-
-    try {
-      process.stdout.write(`  generating prompt ...\n`);
-      const prompt = await generatePrompt(photo.urls.regular);
-      console.log(`  → "${prompt}"`);
-
-      process.stdout.write(`  generating AI image (${MODEL_KEY}) ... `);
-      const aiImageUrl = await generateAiImage(prompt);
-      console.log('ok');
-
-      process.stdout.write(`  downloading + converting ... `);
-      const [realWebP, aiWebP] = await Promise.all([
-        downloadBuffer(photo.urls.regular).then(toWebP),
-        downloadBuffer(aiImageUrl).then(toWebP),
-      ]);
-      console.log('ok');
-
-      const pairKey = `gen/${CATEGORY}-${Date.now()}-${i}`;
-      process.stdout.write(`  uploading to R2 ... `);
-      const [realUrl, aiUrl] = await Promise.all([
-        uploadToR2(realWebP, `${pairKey}/real.webp`),
-        uploadToR2(aiWebP,   `${pairKey}/ai.webp`),
-      ]);
-      console.log(`ok (${pairKey})`);
-
-      const attribution = `${photo.links.html}?utm_source=ai_hunter&utm_medium=referral`;
-      const { error: dbErr } = await supabase.from('tasks').insert({
-        real_image_url:     realUrl,
-        ai_image_url:       aiUrl,
-        ai_model_engine:    MODEL_KEY,
-        generation_prompt:  prompt,
-        source_attribution: attribution,
-        category:           CATEGORY,
-        difficulty_tier:    DIFFICULTY,
-        tell_annotations:   [],
-        approval_status:    'pending',
-        seed_real_votes:    seeds.real,
-        seed_ai_votes:      seeds.ai,
-      });
-      if (dbErr) throw new Error(`Supabase insert: ${dbErr.message}`);
-
-      console.log(`  inserted as pending\n`);
-      succeeded++;
-    } catch (err) {
-      console.error(`  FAILED: ${err.message}\n`);
-      failed++;
+    if (!results.length) {
+      console.log('  No more Unsplash results — stopping early.');
+      break;
     }
 
-    if (i < photos.length - 1) await sleep(800);
+    console.log(`  Page ${page}/${totalPages} — ${results.length} photos\n`);
+
+    for (const photo of results) {
+      if (succeeded + failed >= COUNT) break outer;
+
+      const desc = photo.alt_description ?? photo.description ?? '(no description)';
+      const tag  = `[${succeeded + failed + 1}/${COUNT}]`;
+      console.log(`${tag} ${photo.id} — ${desc}`);
+
+      const photoUrl        = `${photo.links.html}?utm_source=ai_hunter&utm_medium=referral`;
+      const photographerUrl = `${photo.user.links.html}?utm_source=ai_hunter&utm_medium=referral`;
+      const attribution     = `Photo by ${photo.user.name} (${photographerUrl}) on Unsplash | ${photoUrl}`;
+
+      try {
+        // Already in DB — skip without counting against the target
+        const { data: existing } = await supabase
+          .from('tasks').select('id').eq('source_attribution', attribution).maybeSingle();
+        if (existing) {
+          console.log(`  already in DB, skipping\n`);
+          continue;
+        }
+
+        process.stdout.write(`  generating prompt ...\n`);
+        const prompt = await generatePrompt(photo.urls.regular);
+        console.log(`  → "${prompt}"`);
+
+        process.stdout.write(`  generating AI image (${MODEL_KEY}) ... `);
+        const aiImageUrl = await withRetry(() => generateAiImage(prompt));
+        console.log('ok');
+
+        process.stdout.write(`  downloading + converting ... `);
+        const [realWebP, aiWebP] = await Promise.all([
+          downloadBuffer(photo.urls.regular).then(toWebP),
+          Buffer.isBuffer(aiImageUrl) ? toWebP(aiImageUrl) : downloadBuffer(aiImageUrl).then(toWebP),
+        ]);
+        console.log('ok');
+
+        const pairKey = `gen/${CATEGORY}-${Date.now()}-${succeeded + failed}`;
+        process.stdout.write(`  uploading to R2 ... `);
+        const [realUrl, aiUrl] = await Promise.all([
+          uploadToR2(realWebP, `${pairKey}/real.webp`),
+          uploadToR2(aiWebP,   `${pairKey}/ai.webp`),
+        ]);
+        console.log(`ok (${pairKey})`);
+
+        const { error: dbErr } = await supabase.from('tasks').insert({
+          real_image_url:     realUrl,
+          ai_image_url:       aiUrl,
+          ai_model_engine:    MODEL_KEY,
+          generation_prompt:  prompt,
+          source_attribution: attribution,
+          category:           CATEGORY,
+          difficulty_tier:    DIFFICULTY,
+          tell_annotations:   [],
+          approval_status:    'pending',
+          seed_real_votes:    seeds.real,
+          seed_ai_votes:      seeds.ai,
+        });
+        if (dbErr) throw new Error(`Supabase insert: ${dbErr.message}`);
+
+        // Auto-annotate tells — fails silently so it never blocks the pipeline
+        try {
+          process.stdout.write(`  annotating tells ... `);
+          const tells = await annotateAiImage(aiUrl);
+          await supabase.from('tasks').update({ tell_annotations: tells })
+            .eq('source_attribution', attribution);
+          console.log(`${tells.length} found`);
+        } catch (annotErr) {
+          console.log(`skipped (${annotErr.message.slice(0, 60)})`);
+        }
+
+        console.log(`  inserted as pending\n`);
+        succeeded++;
+      } catch (err) {
+        console.error(`  FAILED: ${err.message}\n`);
+        failed++;
+      }
+
+      await sleep(2000);
+    }
+
+    if (page >= totalPages) {
+      console.log('  Reached last page of Unsplash results.');
+      break;
+    }
+    page++;
+    await sleep(1000); // brief pause between page fetches
   }
 
   console.log(`Done: ${succeeded} inserted, ${failed} failed.`);
