@@ -256,15 +256,16 @@
     width: 100%; padding: 6px 8px; background: var(--bg);
     border: 1px solid var(--border); border-radius: 5px;
     color: var(--text); font-size: 12px; font-family: inherit;
-    resize: none; min-height: 54px; line-height: 1.5;
+    resize: none; min-height: 72px; line-height: 1.5;
   }
   .tell-fields textarea:focus { outline: none; border-color: var(--accent); }
   .tell-fields input {
     width: 100%; padding: 5px 8px; background: var(--bg);
     border: 1px solid var(--border); border-radius: 5px;
-    color: var(--muted); font-size: 11px; font-family: inherit;
+    color: var(--text); font-size: 12px; font-weight: 600; font-family: inherit;
   }
-  .tell-fields input:focus { outline: none; border-color: var(--accent); color: var(--text); }
+  .tell-fields input:focus { outline: none; border-color: var(--accent); }
+  .tell-fields input::placeholder { color: var(--muted); font-weight: 400; }
 
   .tell-remove {
     position: absolute; top: 6px; right: 6px;
@@ -375,6 +376,17 @@
     <div id="zoom-viewport">
       <div id="image-container">
         <img id="main-img" draggable="false" alt=""/>
+        <!-- Safe zone overlay: shows the visible crop area in the app (portrait card, resizeMode=cover) -->
+        <div id="safe-zone-overlay" style="
+          position:absolute; inset:0; pointer-events:none; z-index:5;
+        ">
+          <!-- left crop zone -->
+          <div id="sz-left"  style="position:absolute; top:0; bottom:0; left:0; background:rgba(0,0,0,0.38); border-right:2px solid #f90;"></div>
+          <!-- right crop zone -->
+          <div id="sz-right" style="position:absolute; top:0; bottom:0; right:0; background:rgba(0,0,0,0.38); border-left:2px solid #f90;"></div>
+          <!-- label -->
+          <div id="sz-label" style="position:absolute; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.55); color:#f90; font-size:10px; font-weight:700; padding:2px 8px; border-radius:3px; white-space:nowrap; letter-spacing:.08em; font-family:ui-monospace,monospace;">APP VISIBLE ZONE</div>
+        </div>
       </div>
     </div>
 
@@ -469,7 +481,8 @@ function sbHeaders(extra = {}) {
   return { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', ...extra };
 }
 async function sbFetch(path, opts = {}) {
-  const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, { headers: sbHeaders(), ...opts });
+  const { headers: extraHeaders, ...restOpts } = opts;
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, { headers: sbHeaders(extraHeaders||{}), ...restOpts });
   if (!res.ok) { const t = await res.text(); throw new Error(`Supabase ${res.status}: ${t.slice(0,120)}`); }
   const text = await res.text();
   return text ? JSON.parse(text) : null;
@@ -485,12 +498,15 @@ async function init() {
 
 async function loadQueue() {
   try {
-    const rows = await sbFetch(
-      'tasks?select=id,ai_image_url,category,difficulty_tier,tell_annotations,tells_reviewed' +
-      '&approval_status=eq.active&order=category.asc,created_at.asc&limit=2000'
-    );
-    allTasks = (rows || []).filter(r =>
-      Array.isArray(r.tell_annotations) && r.tell_annotations.length > 0 && !r.tells_reviewed
+    const base = 'tasks?select=id,ai_image_url,category,difficulty_tier,tell_annotations,tells_reviewed' +
+      '&approval_status=eq.active&tells_reviewed=neq.true&order=category.asc,created_at.asc&limit=1000';
+    const [page1, page2] = await Promise.all([
+      sbFetch(base + '&offset=0'),
+      sbFetch(base + '&offset=1000'),
+    ]);
+    const rows = [...(page1||[]), ...(page2||[])];
+    allTasks = rows.filter(r =>
+      Array.isArray(r.tell_annotations) && r.tell_annotations.length > 0
     );
     populateCategoryFilter();
     applyFilters();
@@ -552,16 +568,56 @@ function showTask(task) {
 
   const img = document.getElementById('main-img');
   img.onload = () => {
+    updateSafeZone(img.naturalWidth, img.naturalHeight);
     initTells(task.tell_annotations);
     updateProgress();
   };
   img.src = task.ai_image_url;
 }
 
+// Card aspect ratio in the app: CARD_W / CARD_H = 0.5 (portrait)
+// resizeMode="cover" fills the card, cropping the wider dimension.
+// For a landscape/square image, the sides get cropped; for a portrait image, top/bottom get cropped.
+function updateSafeZone(nw, nh) {
+  const CARD_RATIO = 0.5; // card width / card height
+  const imgRatio   = nw / nh;
+  const szLeft  = document.getElementById('sz-left');
+  const szRight = document.getElementById('sz-right');
+  const label = document.getElementById('sz-label');
+  if (imgRatio > CARD_RATIO) {
+    // Landscape/square image — sides cropped
+    const visibleFrac = CARD_RATIO / imgRatio;
+    const cropEach = (1 - visibleFrac) / 2;
+    szLeft.style.width  = (cropEach * 100) + '%';
+    szRight.style.width = (cropEach * 100) + '%';
+    szLeft.style.height  = '100%'; szLeft.style.top  = '0';
+    szRight.style.height = '100%'; szRight.style.top = '0';
+    document.getElementById('sz-top')?.remove();
+    document.getElementById('sz-bottom')?.remove();
+    if (label) label.style.top = '6px';
+  } else {
+    // Portrait image — top/bottom cropped
+    szLeft.style.width  = '0';
+    szRight.style.width = '0';
+    ['sz-top','sz-bottom'].forEach(id => document.getElementById(id)?.remove());
+    const visibleFrac = imgRatio / CARD_RATIO;
+    const cropEach = (1 - visibleFrac) / 2;
+    const overlay = document.getElementById('safe-zone-overlay');
+    ['top','bottom'].forEach(side => {
+      const d = document.createElement('div');
+      d.id = 'sz-' + side;
+      d.style.cssText = `position:absolute;left:0;right:0;${side}:0;height:${cropEach*100}%;background:rgba(0,0,0,0.38);border-${side==='top'?'bottom':'top'}:2px solid #f90;`;
+      overlay.appendChild(d);
+    });
+    // Place label just below the top crop line
+    if (label) label.style.top = (cropEach * 100 + 1) + '%';
+  }
+}
+
 function initTells(annotations) {
   currentTells = (annotations || []).map(a => {
     const c = textToCoords(a.location || '');
-    return { description: a.description||'', location: a.location||'', x: a.x??c.x, y: a.y??c.y };
+    return { title: a.title||'', description: a.description||'', location: a.location||'', x: a.x??c.x, y: a.y??c.y };
   });
   renderMarkers();
   renderPanel();
@@ -674,8 +730,6 @@ document.addEventListener('mousemove', e => {
 
   const marker = imageContainer.querySelector(`.tell-marker[data-i="${drag.index}"]`);
   if (marker) { marker.style.left = (nx*100)+'%'; marker.style.top = (ny*100)+'%'; }
-  const locInput = document.querySelector(`.tell-row[data-index="${drag.index}"] .loc-input`);
-  if (locInput) locInput.value = currentTells[drag.index].location;
 });
 
 document.addEventListener('mouseup', () => {
@@ -754,7 +808,7 @@ function renderMarkers() {
 // ── Tell CRUD ─────────────────────────────────────────────────────────────────
 function addTellAt(x, y) {
   if (currentTells.length >= 3) return;
-  currentTells.push({ description: '', location: coordsToText(x, y), x, y });
+  currentTells.push({ title: '', description: '', location: coordsToText(x, y), x, y });
   const newIdx = currentTells.length - 1;
   selectTell(newIdx);
   renderMarkers();
@@ -787,15 +841,15 @@ function renderPanel() {
     <div class="tell-row${i===selectedTell?' active':''}" data-index="${i}" onclick="selectTell(${i})">
       <div class="tell-dot" data-i="${i}"></div>
       <div class="tell-fields">
-        <textarea rows="2" placeholder="Describe the AI artifact…"
+        <input type="text" placeholder="Tell title (e.g. Overly Smooth Skin)"
+          value="${escHtml(t.title)}"
+          onchange="currentTells[${i}].title=this.value"
+          oninput="currentTells[${i}].title=this.value"
+        />
+        <textarea rows="3" placeholder="Describe the AI artifact…"
           onchange="currentTells[${i}].description=this.value"
           oninput="currentTells[${i}].description=this.value"
         >${escHtml(t.description)}</textarea>
-        <input class="loc-input" type="text" placeholder="Location (e.g. center, lower right)"
-          value="${escHtml(t.location)}"
-          onchange="currentTells[${i}].location=this.value"
-          oninput="currentTells[${i}].location=this.value"
-        />
       </div>
       <button class="tell-remove" onclick="event.stopPropagation();removeTell(${i})" title="Remove">×</button>
     </div>`).join('');
@@ -825,7 +879,7 @@ function toggleMarkers() {
 async function approveTask() {
   if (!currentTask) return;
   const tells = currentTells
-    .map(t => ({ description: t.description.trim(), location: t.location.trim(), x: +t.x.toFixed(4), y: +t.y.toFixed(4) }))
+    .map(t => ({ title: t.title.trim(), description: t.description.trim(), x: +t.x.toFixed(4), y: +t.y.toFixed(4) }))
     .filter(t => t.description);
 
   if (tells.length === 0) { flashStatus('Add at least one tell before approving'); return; }
