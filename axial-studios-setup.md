@@ -76,7 +76,32 @@ Studios Apple ID.
 - **App live under "Carson Lane": within ~1–2 weeks**
 - **Name switches to "Axial Studios LLC": ~7–8 weeks from today**
 
+## Android / Google Play Store
+Same codebase, second platform. Expo/React Native builds for both iOS and Android from 
+the same code — no separate app to maintain.
+
+- **Google Play registration:** One-time $25 fee (never annual, unlike Apple's $99/yr)
+- **Review time:** Much faster than Apple — often same day
+- **Code changes:** Minimal to none for a standard Expo app
+- **Build + submit:** `eas build --platform android` → `eas submit --platform android`
+
+**Plan:** Launch iOS first, get it stable, then submit Android. Probably a week of 
+verification that everything looks right on Android, then submit. Both stores covered 
+with essentially zero extra code.
+
+## Total Cost (Both Platforms)
+| Item | Cost |
+|---|---|
+| Minnesota LLC | $155 |
+| EIN | $0 |
+| New Apple ID (Axial Studios) | $0 |
+| DUNS number | $0 |
+| Apple Developer account | $99 |
+| Google Play registration | $25 |
+| **Total** | **$279** |
+
 ## Notes
 - Minnesota is the right state — no reason to file in Delaware unless raising VC money
-- App Store review per app (separate from account): ~24–48 hrs per submission
+- App Store review per app: ~24–48 hrs (Apple), same day (Google)
 - Apple requires the org to be a real LLC or corporation — sole proprietor/DBA not accepted
+- Revenue earned during individual → org transition is fine; carries over automatically
