@@ -1,0 +1,53 @@
+<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <!--
+    AI Hunter logo — robot head inside crosshair ring.
+    Use fill="currentColor" in React Native:
+      <SvgXml xml={logo} color="black" />   — light background
+      <SvgXml xml={logo} color="white" />   — dark background
+    Two groups for future animation.
+  -->
+
+  <!-- CROSSHAIR (ring + tick marks) -->
+  <g id="crosshair" fill="currentColor">
+    <!-- Annular ring via evenodd compound path -->
+    <path fill-rule="evenodd" d="
+      M 8,200 A 192,192 0 1 0 392,200 A 192,192 0 1 0 8,200 Z
+      M 28,200 A 172,172 0 1 1 372,200 A 172,172 0 1 1 28,200 Z
+    "/>
+    <!-- Tick marks extending inward from inner ring edge -->
+    <rect x="193" y="28"  width="14" height="24"/> <!-- top    -->
+    <rect x="193" y="348" width="14" height="24"/> <!-- bottom -->
+    <rect x="28"  y="193" width="24" height="14"/> <!-- left   -->
+    <rect x="348" y="193" width="24" height="14"/> <!-- right  -->
+  </g>
+
+  <!-- ROBOT HEAD -->
+  <g id="robot">
+    <!-- Antenna: open circle + thin stalk -->
+    <circle cx="200" cy="115" r="8"
+            fill="none" stroke="currentColor" stroke-width="4"/>
+    <line x1="200" y1="123" x2="200" y2="150"
+          stroke="currentColor" stroke-width="4"/>
+
+    <!-- Head border (open rect, background shows through interior) -->
+    <rect x="140" y="150" width="120" height="132" rx="12"
+          fill="none" stroke="currentColor" stroke-width="9"/>
+
+    <!-- Ear tabs -->
+    <rect x="130" y="196" width="10" height="26" rx="2" fill="currentColor"/>
+    <rect x="260" y="196" width="10" height="26" rx="2" fill="currentColor"/>
+
+    <!-- Visor with vertical pill eye slots punched through (evenodd) -->
+    <path fill-rule="evenodd" fill="currentColor" d="
+      M 153,168 H 247 Q 251,168 251,172 V 210 Q 251,214 247,214
+        H 153 Q 149,214 149,210 V 172 Q 149,168 153,168 Z
+      M 173,173 H 174 Q 180,173 180,179 V 199 Q 180,205 174,205
+        H 173 Q 167,205 167,199 V 179 Q 167,173 173,173 Z
+      M 226,173 H 227 Q 233,173 233,179 V 199 Q 233,205 227,205
+        H 226 Q 220,205 220,199 V 179 Q 220,173 226,173 Z
+    "/>
+
+    <!-- Chin bar -->
+    <rect x="162" y="264" width="76" height="7" rx="3" fill="currentColor"/>
+  </g>
+</svg>
