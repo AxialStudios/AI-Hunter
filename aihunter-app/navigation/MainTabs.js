@@ -2,22 +2,22 @@ import { TouchableOpacity, View, Text, Animated, StyleSheet } from 'react-native
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import GameplayScreen    from '../features/gameplay/GameplayScreen';
-import DailyScreen       from '../features/daily/DailyScreen';
-import LeaderboardScreen from '../features/leaderboard/LeaderboardScreen';
-import ProfileScreen     from '../features/profile/ProfileScreen';
-import AnalyticsScreen   from '../features/analytics/AnalyticsScreen';
+import GameplayScreen        from '../features/gameplay/GameplayScreen';
+import DailyScreen           from '../features/daily/DailyScreen';
+import ProfileScreen         from '../features/profile/ProfileScreen';
+import AnalyticsScreen       from '../features/analytics/AnalyticsScreen';
+import CollectionsNavigator  from './CollectionsNavigator';
 import { colors, fonts } from '../constants/theme';
 import { useTutorial } from '../context/TutorialContext';
 
 const Tab = createBottomTabNavigator();
 
 const TABS = [
-  { name: 'Play',      label: 'Play',     icon: 'eye',      component: GameplayScreen    },
-  { name: 'Daily',     label: 'Daily',    icon: 'calendar', component: DailyScreen       },
-  { name: 'Rankings',  label: 'Rankings', icon: 'award',    component: LeaderboardScreen },
-  { name: 'Analytics', label: 'Stats',    icon: 'bar-chart-2', component: AnalyticsScreen },
-  { name: 'Profile',   label: 'Profile',  icon: 'user',     component: ProfileScreen     },
+  { name: 'Play',        label: 'Play',        icon: 'eye',      component: GameplayScreen       },
+  { name: 'Daily',       label: 'Daily',       icon: 'calendar', component: DailyScreen          },
+  { name: 'Collections', label: 'Collections', icon: 'grid',     component: CollectionsNavigator },
+  { name: 'Analytics',   label: 'Stats',       icon: 'bar-chart-2', component: AnalyticsScreen  },
+  { name: 'Profile',     label: 'Profile',     icon: 'user',     component: ProfileScreen        },
 ];
 
 function TabBar({ state, navigation }) {
