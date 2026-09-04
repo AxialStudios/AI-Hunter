@@ -4,8 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
+import { useProStatus } from '../../context/ProContext';
 import { supabase } from '../../lib/supabase';
 import { colors, fonts, radius } from '../../constants/theme';
+import PaywallScreen from '../paywall/PaywallScreen';
 
 function formatMs(ms) {
   if (!ms) return '—';
@@ -43,9 +45,11 @@ function computeStreak(votes) {
 }
 
 export default function ProfileScreen() {
-  const { user, signOut } = useAuth();
+  const { user, signOut }  = useAuth();
+  const { isPro }          = useProStatus();
   const [votes,   setVotes]   = useState([]);
   const [loading, setLoading] = useState(true);
+  const [paywallOpen, setPaywallOpen] = useState(false);
 
   const isAnon  = !user?.email;
   const initial = user?.email?.[0]?.toUpperCase() ?? '?';
@@ -142,6 +146,18 @@ export default function ProfileScreen() {
           </View>
         )}
 
+        {/* Upgrade banner */}
+        {!isPro && (
+          <TouchableOpacity style={styles.upgradeBanner} onPress={() => setPaywallOpen(true)} activeOpacity={0.85}>
+            <Feather name="zap" size={16} color="#a78bfa" />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.upgradeBannerTitle}>Upgrade to Pro</Text>
+              <Text style={styles.upgradeBannerSub}>Unlock all tells, analytics & more</Text>
+            </View>
+            <Feather name="chevron-right" size={16} color="#a78bfa" />
+          </TouchableOpacity>
+        )}
+
         {/* Settings */}
         <Text style={styles.sectionLabel}>SETTINGS</Text>
         <View style={styles.settingsBlock}>
@@ -162,6 +178,8 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           ))}
         </View>
+
+        <PaywallScreen visible={paywallOpen} onClose={() => setPaywallOpen(false)} />
 
         <TouchableOpacity style={styles.signOutBtn} onPress={signOut} activeOpacity={0.7}>
           <Feather name="log-out" size={16} color={colors.incorrect} />
@@ -218,4 +236,8 @@ const styles = StyleSheet.create({
 
   signOutBtn:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16 },
   signOutText: { fontSize: 15, fontFamily: fonts.semiBold, color: colors.incorrect },
+
+  upgradeBanner:      { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(124,58,237,0.12)', borderWidth: 1, borderColor: 'rgba(124,58,237,0.3)', borderRadius: radius.lg, padding: 16, marginBottom: 20 },
+  upgradeBannerTitle: { fontSize: 15, fontFamily: fonts.semiBold, color: '#a78bfa' },
+  upgradeBannerSub:   { fontSize: 12, fontFamily: fonts.regular, color: colors.textTertiary, marginTop: 1 },
 });

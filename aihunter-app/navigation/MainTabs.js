@@ -6,16 +6,18 @@ import GameplayScreen    from '../features/gameplay/GameplayScreen';
 import DailyScreen       from '../features/daily/DailyScreen';
 import LeaderboardScreen from '../features/leaderboard/LeaderboardScreen';
 import ProfileScreen     from '../features/profile/ProfileScreen';
+import AnalyticsScreen   from '../features/analytics/AnalyticsScreen';
 import { colors, fonts } from '../constants/theme';
 import { useTutorial } from '../context/TutorialContext';
 
 const Tab = createBottomTabNavigator();
 
 const TABS = [
-  { name: 'Play',     label: 'Play',     icon: 'eye',      component: GameplayScreen    },
-  { name: 'Daily',    label: 'Daily',    icon: 'calendar', component: DailyScreen       },
-  { name: 'Rankings', label: 'Rankings', icon: 'award',    component: LeaderboardScreen },
-  { name: 'Profile',  label: 'Profile',  icon: 'user',     component: ProfileScreen     },
+  { name: 'Play',      label: 'Play',     icon: 'eye',      component: GameplayScreen    },
+  { name: 'Daily',     label: 'Daily',    icon: 'calendar', component: DailyScreen       },
+  { name: 'Rankings',  label: 'Rankings', icon: 'award',    component: LeaderboardScreen },
+  { name: 'Analytics', label: 'Stats',    icon: 'bar-chart-2', component: AnalyticsScreen },
+  { name: 'Profile',   label: 'Profile',  icon: 'user',     component: ProfileScreen     },
 ];
 
 function TabBar({ state, navigation }) {

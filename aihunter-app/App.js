@@ -15,6 +15,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { HapticsProvider } from './context/HapticsContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { TutorialProvider } from './context/TutorialContext';
+import { ProProvider } from './context/ProContext';
 import ThesisScreen from './features/onboarding/ThesisScreen';
 import OnboardingScreen from './features/onboarding/OnboardingScreen';
 import MainTabs from './navigation/MainTabs';
@@ -83,9 +84,11 @@ export default function App() {
       <ThemeProvider>
         <HapticsProvider>
           <AuthProvider>
-            <TutorialProvider>
-              <AppNavigator />
-            </TutorialProvider>
+            <ProProvider>
+              <TutorialProvider>
+                <AppNavigator />
+              </TutorialProvider>
+            </ProProvider>
           </AuthProvider>
         </HapticsProvider>
       </ThemeProvider>

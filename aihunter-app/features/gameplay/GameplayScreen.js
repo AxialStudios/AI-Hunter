@@ -15,6 +15,8 @@ import { useHaptics } from '../../context/HapticsContext';
 import { colors, fonts, radius } from '../../constants/theme';
 import TutorialOverlay from './TutorialOverlay';
 import { useTutorial } from '../../context/TutorialContext';
+import { useProStatus } from '../../context/ProContext';
+import PaywallScreen from '../paywall/PaywallScreen';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const CARD_W = Math.floor((SW - 32 - 10) / 2);
@@ -35,6 +37,7 @@ const WHITE_FILL     = 'rgba(255,255,255,0.55)';
 export default function GameplayScreen() {
   const { user }                                        = useAuth();
   const { medium, success, error: hapticError, light } = useHaptics();
+  const { isPro }                                       = useProStatus();
   const insets = useSafeAreaInsets();
   const { startTutorial, revealTabBar } = useTutorial();
   const wasTutorial = useRef(false);
@@ -56,7 +59,8 @@ export default function GameplayScreen() {
   const [votesBoxTapped, setVotesBoxTapped] = useState(false);
   const [showNextPairPulse, setShowNextPairPulse] = useState(false);
 
-  const [showTells, setShowTells] = useState(false);
+  const [showTells,    setShowTells]    = useState(false);
+  const [paywallOpen, setPaywallOpen] = useState(false);
   const [zoomTell,    setZoomTell]    = useState(null);
   const zoomTellRef   = useRef(null);
   const [selectedSide, setSelectedSide] = useState(null); // 'left' | 'right' — pre-confirm pick
@@ -788,6 +792,19 @@ export default function GameplayScreen() {
   const rightColor     = !leftIsReal ? colors.correct : colors.incorrect;
   const tells          = task ? (task.tell_annotations || []) : [];
 
+  // Free tell = the tell whose coordinates are closest to image center (0.5, 0.5).
+  // This maximises the chance the free tell is visible in the portrait card crop
+  // (landscape images crop the sides; the most centered tell is always in the safe zone).
+  const freeTellIndex = tells.reduce((best, t, i) => {
+    const dx = (t.x ?? 0.5) - 0.5;
+    const dy = (t.y ?? 0.5) - 0.5;
+    const d  = dx * dx + dy * dy;
+    const bx = (tells[best].x ?? 0.5) - 0.5;
+    const by = (tells[best].y ?? 0.5) - 0.5;
+    const bd = bx * bx + by * by;
+    return d < bd ? i : best;
+  }, 0);
+
   return (
     <View style={styles.root}>
 
@@ -1141,37 +1158,66 @@ export default function GameplayScreen() {
                     </View>
 
                     {showTells && <Text style={styles.tellsSubheading}>The Tells</Text>}
-                    {showTells && tells.map((tell, i) => (
-                      <TouchableOpacity
-                        key={i}
-                        style={styles.tellItem}
-                        onPress={() => {
-                          if (tutorialStep === 'tells_tap') advanceTutorial();
-                          if (tell.x != null) openTell(tell);
-                        }}
-                        activeOpacity={0.72}
-                      >
-                        {tutorialStep === 'tells_tap' && (
-                          <Animated.View
-                            pointerEvents="none"
-                            style={{
-                              ...StyleSheet.absoluteFillObject,
-                              borderRadius: radius.md,
-                              borderWidth: 1.5,
-                              borderColor: '#fff',
-                              opacity: tellsPulse,
-                            }}
-                          />
-                        )}
-                        <View style={styles.tellItemHeader}>
-                          <View style={styles.tellBadge}>
-                            <Text style={styles.tellBadgeNum}>{i + 1}</Text>
+                    {showTells && tells.map((tell, i) => {
+                      const isFree   = i === freeTellIndex;
+                      const isGated  = !isPro && !isFree;
+                      const tellName = tell.title || tell.label || '';
+                      return (
+                        <TouchableOpacity
+                          key={i}
+                          style={styles.tellItem}
+                          onPress={() => {
+                            if (isGated) { setPaywallOpen(true); return; }
+                            if (tutorialStep === 'tells_tap') advanceTutorial();
+                            if (tell.x != null) openTell(tell);
+                          }}
+                          activeOpacity={0.72}
+                        >
+                          {tutorialStep === 'tells_tap' && isFree && (
+                            <Animated.View
+                              pointerEvents="none"
+                              style={{
+                                ...StyleSheet.absoluteFillObject,
+                                borderRadius: radius.md,
+                                borderWidth: 1.5,
+                                borderColor: '#fff',
+                                opacity: tellsPulse,
+                              }}
+                            />
+                          )}
+                          <View style={styles.tellItemHeader}>
+                            <View style={styles.tellBadge}>
+                              <Text style={styles.tellBadgeNum}>{i + 1}</Text>
+                            </View>
+                            {isGated
+                              ? <Text style={[styles.tellLabel, styles.tellLabelGated]}>🔒 Pro Tell</Text>
+                              : <Text style={styles.tellLabel}>{tellName}</Text>
+                            }
                           </View>
-                          <Text style={styles.tellLabel}>{tell.label}</Text>
-                        </View>
-                        <Text style={styles.tellDescription}>{tell.description}</Text>
+                          {isGated ? (
+                            <View style={styles.gatedBody}>
+                              <View style={styles.gatedTextWrap}>
+                                <Text style={styles.tellDescription} numberOfLines={2}>
+                                  {tell.description || ''}
+                                </Text>
+                              </View>
+                              <View style={styles.gatedOverlay} />
+                            </View>
+                          ) : (
+                            <Text style={styles.tellDescription}>{tell.description}</Text>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                    {showTells && !isPro && tells.length > 1 && (
+                      <TouchableOpacity style={styles.upgradePrompt} onPress={() => setPaywallOpen(true)} activeOpacity={0.8}>
+                        <Feather name="lock" size={13} color="#a78bfa" />
+                        <Text style={styles.upgradePromptText}>
+                          See all {tells.length} tells — Upgrade to Pro
+                        </Text>
+                        <Feather name="chevron-right" size={13} color="#a78bfa" />
                       </TouchableOpacity>
-                    ))}
+                    )}
                   </View>
               </Animated.View>
             )}
@@ -1200,7 +1246,7 @@ export default function GameplayScreen() {
           <TouchableOpacity onPress={() => { light(); setZoomTell(null); }} style={styles.modalCloseBtn}>
             <Feather name="x" size={22} color={colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.modalTitle} numberOfLines={1}>{zoomTellRef.current?.label}</Text>
+          <Text style={styles.modalTitle} numberOfLines={1}>{zoomTellRef.current?.title || zoomTellRef.current?.label}</Text>
           <View style={{ width: 44 }} />
         </View>
 
@@ -1276,6 +1322,9 @@ export default function GameplayScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* ── PAYWALL MODAL ── */}
+      <PaywallScreen visible={paywallOpen} onClose={() => setPaywallOpen(false)} />
 
       {/* ── NEXT CARD PRE-RENDER ─ topmost layer so iOS always composites it
            (never occluded) → textures decoded in GPU memory before transition.
@@ -1378,6 +1427,13 @@ const styles = StyleSheet.create({
 
   nextBtn:     { flex: 1, backgroundColor: colors.textPrimary, paddingVertical: 18, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   nextBtnText: { color: colors.bg, fontSize: 17, fontFamily: fonts.bold },
+
+  tellLabelGated:  { color: colors.textTertiary, fontStyle: 'italic' },
+  gatedBody:       { position: 'relative', paddingLeft: 34, overflow: 'hidden' },
+  gatedTextWrap:   { opacity: 0.18 },
+  gatedOverlay:    { ...StyleSheet.absoluteFillObject, backgroundColor: 'transparent' },
+  upgradePrompt:   { flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 12, paddingHorizontal: 16, backgroundColor: 'rgba(124,58,237,0.1)', borderRadius: radius.md, borderWidth: 1, borderColor: 'rgba(124,58,237,0.3)', justifyContent: 'center' },
+  upgradePromptText: { fontSize: 13, fontFamily: fonts.semiBold, color: '#a78bfa', flex: 1, textAlign: 'center' },
 
   tutorialTellsPrompt: { fontSize: 14, fontFamily: fonts.medium, color: 'rgba(255,255,255,0.55)', textAlign: 'center' },
   tutorialVotesBox:    { alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 22, borderRadius: 20, alignItems: 'center', gap: 2 },
